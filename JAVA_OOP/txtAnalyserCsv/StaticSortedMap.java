@@ -3,42 +3,42 @@ import java.io.Reader;
 import java.util.*;
 
 public class StatisticSortedSet implements Statistic{
-    StatisticSortedSet(){ data = new TreeSet<Word>(); }
+    StatisticSortedSet(){ data = new HashMap<String, Integer>(); }
 
     @Override
-    public void analyseFile(Reader reader) {
+    public void analyseFile(Reader reader) throws IOException {
         wordCounter = 0;
         StringBuilder builder = new StringBuilder();
         boolean eof = false;
         char symbol;
-        try {
-            while(!eof) {
-                symbol = (char) reader.read();
-                if(Character.isLetterOrDigit(symbol)) {
-                    builder.append(symbol);
-                } else {
-                    if(builder.length() > 0) {
-                        ++wordCounter;
-                        Word newWord = new Word(builder.toString());
-                        if(data.add(newWord)){
-                            System.out.println(newWord.toString());
-                        }
-                        builder.setLength(0);
-                    }
+
+        while(!eof) {
+            symbol = (char) reader.read();
+            if(Character.isLetterOrDigit(symbol)) {
+                builder.append(symbol);
+            } else {
+                if(builder.length() > 0) { //method merge map
+                    ++wordCounter;
+                    String newWord = builder.toString();
+                    data.merge(newWord, 1, (x, y) -> x + 1);
+                    builder.setLength(0);
                 }
-                if(!reader.ready()) eof = true;
             }
-        } catch (IOException ioe) {
-            System.out.println("Error while reading the file: " + ioe.getMessage());
+            if(!reader.ready()) eof = true;
         }
 
     }
 
     @Override
     public Object[] getData(){
-        Object[] arrayView = data.toArray();
-        Arrays.sort(arrayView);
-        return arrayView;
+        ArrayList<Word> arrayView = new ArrayList<Word>();
+        for(Map.Entry<String, Integer> pair : data.entrySet()){
+            Word newWord = new Word(pair.getKey(), pair.getValue());
+            arrayView.add(newWord);
+        }
+        Object[] toSort = arrayView.toArray();
+        Arrays.sort(toSort);
+        return toSort;
     }
 
     @Override
@@ -46,6 +46,6 @@ public class StatisticSortedSet implements Statistic{
         return wordCounter;
     }
 
-    private TreeSet<Word> data;
+    private HashMap<String, Integer> data;
     private long wordCounter;
 }
