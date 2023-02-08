@@ -1,5 +1,7 @@
 import java.io.*;
 
+
+//добавить запятые, использовать merge, дописать исключения в сигнатуру csvwriter
 public class Main {
     public static void main(String[] args) {
         Reader reader = null;
