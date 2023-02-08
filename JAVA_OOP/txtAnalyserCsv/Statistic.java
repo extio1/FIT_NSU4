@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.io.Reader;
 
 public interface Statistic{
@@ -9,7 +10,7 @@ public interface Statistic{
      * (отличный от буквы алфавита или числа 0-9), то он считается разделителем
      * между словами
      * */
-    void analyseFile(Reader reader);
+    void analyseFile(Reader reader) throws IOException;
 
     /**
      * Возвращает массив объектов, которые представляют информацию о файле
