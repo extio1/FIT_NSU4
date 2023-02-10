@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <C:\Program Files (x86)\Microsoft SDKs\MPI\Include\mpi.h>
+#include <mpi.h>
 
 #define NOT_STATED -1
 #define UNCORRECT_ANSWER 100
@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
 			messange[i - 1].left = &arr1[(i-1) * proccesJobSize];
 			messange[i - 1].right = arr2;
 			messange[i - 1].lenLeft = proccesJobSize;
-			MPI_Isend(&messange[i-1], 1, arrsDataType, i, MPI_ANY_TAG, MPI_COMM_WORLD, &reqs[i-1]);
+			MPI_Isend(&messange[i-1], 1, arrsDataType, i, 123, MPI_COMM_WORLD, &reqs[i-1]);
 		}
 		
 		MPI_Status stat;
@@ -87,31 +87,34 @@ int main(int argc, char** argv) {
 		int counterInputPr = 0;
 		double answerSum = 0;
 		double incomeVal;
-		for (int i = 1; i < size + 1; i++) {
+		for (int i = 0; i < size; ++i) {
 			MPI_Recv(&incomeVal, 1, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
 			if (stat.MPI_ERROR != MPI_SUCCESS) {
 				printf("Error while sending messange from %d by %d tag\n", stat.MPI_SOURCE, stat.MPI_TAG);
 			} 
-			else{
+			else {
 				answerSum += incomeVal;
-				++counterInputPr;
-			}
-			if (counterInputPr < size) {
-				exit(UNCORRECT_ANSWER);
+				//++counterInputPr;
 			}
 		}
-
-		free(messange);
-	}
-	else {
+		/*
+		if (counterInputPr < size) {
+			printf("")
+			exit(UNCORRECT_ANSWER);
+		}*/
+		free(messange);		
+	} else {
 		MPI_Status stat;
 		arrsData inputData;
+		double chunkOfAnswer = 0;
 		MPI_Recv(&inputData, 1, arrsDataType, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
 		for (double* iter = inputData.left; iter < inputData.left + inputData.lenLeft; ++iter) {
-
+			for(int j = 0; j < LENGTH; ++j){
+				chunkOfAnswer += *iter * *(inputData.right + j); 
+			}
 		}
 		//читаем указатели на нужные массивы, выполняем цикл
-		//MPI_Send() // отсылает 0му, что насчитала
+		MPI_Send(&chunkOfAnswer, 1, MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD); // отсылает 0му, что насчитала
 		printf("I'm %d of %d \n", rank, size);
 	}
 
