@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
 		//ОТПРАВИТЬ АСИНХРОННО СООБЩЕНИЯ 1-n ПРОЦЕССАМ, ПОСЛЕ ЦИКЛА ПРОВЕРИТЬ, ЧТО ВСЕ ДОШЛО, ЕСЛИ НЕТ, ВЫДАТЬ ОШИБКУ
 		//ПОТОМ ЖДАТЬ ПОСЫЛКИ ОТ 1-n ПРОЦЕССОВ, ПО ПОЛУЧЕНИЮ СУММИРОВАТЬ ОТВЕТ
 
-		for (int i = 1; i < size + 1; i++) {
+		for (int i = 1; i < size; i++) {
 			int proccesJobSize = defineSegmentSize(LENGTH, size);
 			messange[i - 1].left = &arr1[(i-1) * proccesJobSize];
 			messange[i - 1].right = arr2;
@@ -73,17 +73,6 @@ int main(int argc, char** argv) {
 		}
 		
 		MPI_Status stat;
-		/*
-		for (int i = 0; i < LENGTH; i++) {
-			check = MPI_Wait(&reqs[i], &stat);
-			if (stat.MPI_ERROR != MPI_SUCCESS)
-				printf("Error while sending messange from %d by %d tag\n", stat.MPI_SOURCE, stat.MPI_TAG);
-		}*/
-
-		//Все сообщения отправлены, проверено, что они дошли. Теперь ждем от остальных процессов
-		//чисел, чтобы их сложить и вывести ответ
-		
-		//Может не надо проверять, что они все дошли?
 		int counterInputPr = 0;
 		double answerSum = 0;
 		double incomeVal;
@@ -97,13 +86,9 @@ int main(int argc, char** argv) {
 				//++counterInputPr;
 			}
 		}
-		/*
-		if (counterInputPr < size) {
-			printf("")
-			exit(UNCORRECT_ANSWER);
-		}*/
+		printf("I'm 0 and I'm DONE!\n\n");
 		free(messange);		
-	} else {
+	} /*else {
 		MPI_Status stat;
 		arrsData inputData;
 		double chunkOfAnswer = 0;
@@ -116,7 +101,7 @@ int main(int argc, char** argv) {
 		//читаем указатели на нужные массивы, выполняем цикл
 		MPI_Send(&chunkOfAnswer, 1, MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD); // отсылает 0му, что насчитала
 		printf("I'm %d of %d \n", rank, size);
-	}
+	}*/
 
 	//double MPI_Wtime (void)
 
