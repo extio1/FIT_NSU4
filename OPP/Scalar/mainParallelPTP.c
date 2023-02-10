@@ -44,9 +44,6 @@ int main(int argc, char** argv) {
 
 	MPI_Aint offset[3] = { 8, 16, 20 }; //тип MPI_Aint хранит адреса (по сути оболочка над указателем)
 	//тут он используется для хранения отсупов
-//offset[0] = 8;
-//offset[1] = 16;
-//offset[2] = 20;
 
 	MPI_Type_create_struct(3, blockLen, offset, arrsDataUsedTypes, &arrsDataType);
 	int check = MPI_Type_commit(&arrsDataType); //"регистрируем" тип, теперь его можно использовать
@@ -59,8 +56,9 @@ int main(int argc, char** argv) {
 	if (rank == 0) {
 		MPI_Request reqs[LENGTH];
 		struct arrsData* messange = (struct arrsData*)malloc(sizeof(struct arrsData) * size);
-		double arr1[LENGTH];
-		double arr2[LENGTH];
+		
+		//double* arr1 = (double*) malloc(sizeof(double)*LENGTH);
+		//double* arr2 = (double*) malloc(sizeof(double)*LENGTH);
 		//ОТПРАВИТЬ АСИНХРОННО СООБЩЕНИЯ 1-n ПРОЦЕССАМ, ПОСЛЕ ЦИКЛА ПРОВЕРИТЬ, ЧТО ВСЕ ДОШЛО, ЕСЛИ НЕТ, ВЫДАТЬ ОШИБКУ
 		//ПОТОМ ЖДАТЬ ПОСЫЛКИ ОТ 1-n ПРОЦЕССОВ, ПО ПОЛУЧЕНИЮ СУММИРОВАТЬ ОТВЕТ
 
@@ -76,7 +74,8 @@ int main(int argc, char** argv) {
 		int counterInputPr = 0;
 		double answerSum = 0;
 		double incomeVal;
-		for (int i = 0; i < size; ++i) {
+
+		for (int i = 0; i < size-1; ++i) {
 			MPI_Recv(&incomeVal, 1, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
 			if (stat.MPI_ERROR != MPI_SUCCESS) {
 				printf("Error while sending messange from %d by %d tag\n", stat.MPI_SOURCE, stat.MPI_TAG);
@@ -86,22 +85,28 @@ int main(int argc, char** argv) {
 				//++counterInputPr;
 			}
 		}
-		printf("I'm 0 and I'm DONE!\n\n");
-		free(messange);		
-	} /*else {
+
+		printf("Answer is %f\n", answerSum);
+		free(messange);
+		free(arr1);
+		free(arr2);		
+	} else {
 		MPI_Status stat;
 		arrsData inputData;
 		double chunkOfAnswer = 0;
 		MPI_Recv(&inputData, 1, arrsDataType, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
+		double a = *inputData.left;
+		/*
 		for (double* iter = inputData.left; iter < inputData.left + inputData.lenLeft; ++iter) {
 			for(int j = 0; j < LENGTH; ++j){
-				chunkOfAnswer += *iter * *(inputData.right + j); 
+				chunkOfAnswer += *iter * (*(inputData.right + j)); 
 			}
-		}
+		}*/
+		printf("I'm %d and I'm ALIVE!\n\n", rank);
 		//читаем указатели на нужные массивы, выполняем цикл
-		MPI_Send(&chunkOfAnswer, 1, MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD); // отсылает 0му, что насчитала
+		MPI_Send(&chunkOfAnswer, 1, MPI_DOUBLE, 0, 321, MPI_COMM_WORLD); // отсылает 0му, что насчитала
 		printf("I'm %d of %d \n", rank, size);
-	}*/
+	}
 
 	//double MPI_Wtime (void)
 
@@ -113,7 +118,6 @@ int main(int argc, char** argv) {
 						outputValue += arr1[i] * arr2[j];
 				}
 		}*/
-
 
 	check = MPI_Finalize();
 	if (check == MPI_ERRORS_RETURN) {
