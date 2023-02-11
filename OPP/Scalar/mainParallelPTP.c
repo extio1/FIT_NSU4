@@ -2,21 +2,19 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-#define NOT_STATED -1
-#define UNCORRECT_ANSWER 100
-#define LENGTH 100000
+#define LENGTH 1000
 
-struct arrsData {
-	double* left;
-	double* right;
-	int lenLeft;
-};
+#define LEFTARR 123
+#define RIGHTARR 456
 
-//Определить размер фрагмента одинакового для всех процессов
+void initArr(double* arr, const int size){
+	for(int i = 0; i < size; i++)
+		arr[i] = i;
+}
+
 int defineSegmentSize(const int sizeArr, const int amProc){
 	static int extraCells = sizeArr % amProc;
 	const static int standartSize = sizeArr / amProc;
-
 	if (extraCells == 0) {
 		return standartSize;
 	}
@@ -27,100 +25,101 @@ int defineSegmentSize(const int sizeArr, const int amProc){
 }
 
 int main(int argc, char** argv) {
-	int rank = NOT_STATED;
-	int size = NOT_STATED;
+	int rank;
+	int size;
 
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-	//	Определяем новый тип данных для передачи процессам
-	// информации о массивах, над которыми они должны работать 
-	MPI_Datatype arrsDataType; // Идентификатор для нового типа
-	// Список использованных типов внутри нового
-	MPI_Datatype arrsDataUsedTypes[3] = { MPI_DOUBLE, MPI_DOUBLE, MPI_INT };
-	int blockLen[3] = { 1, 1, 1 }; // Число использованных блоков 
-	// (на случай наличия поля-массива нужно указать его длину)
+	if (rank == 0) {	
+		double begin, end;
+		double arr1[LENGTH];
+		double arr2[LENGTH];
+		initArr(arr1, LENGTH);
+		initArr(arr2, LENGTH);
 
-	MPI_Aint offset[3] = { 8, 16, 20 }; //тип MPI_Aint хранит адреса (по сути оболочка над указателем)
-	//тут он используется для хранения отсупов
-
-	MPI_Type_create_struct(3, blockLen, offset, arrsDataUsedTypes, &arrsDataType);
-	int check = MPI_Type_commit(&arrsDataType); //"регистрируем" тип, теперь его можно использовать
-	if (check != MPI_SUCCESS) {
-		printf("An error occurred in process #%d while creating the new type.\n", rank);
-		exit(1);
-	}
-
-
-	if (rank == 0) {
-		MPI_Request reqs[LENGTH];
-		struct arrsData* messange = (struct arrsData*)malloc(sizeof(struct arrsData) * size);
-		
-		//double* arr1 = (double*) malloc(sizeof(double)*LENGTH);
-		//double* arr2 = (double*) malloc(sizeof(double)*LENGTH);
-		//ОТПРАВИТЬ АСИНХРОННО СООБЩЕНИЯ 1-n ПРОЦЕССАМ, ПОСЛЕ ЦИКЛА ПРОВЕРИТЬ, ЧТО ВСЕ ДОШЛО, ЕСЛИ НЕТ, ВЫДАТЬ ОШИБКУ
-		//ПОТОМ ЖДАТЬ ПОСЫЛКИ ОТ 1-n ПРОЦЕССОВ, ПО ПОЛУЧЕНИЮ СУММИРОВАТЬ ОТВЕТ
-
+		begin = MPI_Wtime();
+		int currenRecipNum = 1;
+		int leftArrPos = 0;
 		for (int i = 1; i < size; i++) {
-			int proccesJobSize = defineSegmentSize(LENGTH, size);
-			messange[i - 1].left = &arr1[(i-1) * proccesJobSize];
-			messange[i - 1].right = arr2;
-			messange[i - 1].lenLeft = proccesJobSize;
-			MPI_Isend(&messange[i-1], 1, arrsDataType, i, 123, MPI_COMM_WORLD, &reqs[i-1]);
+			int proccesJobSize = defineSegmentSize(LENGTH, size-1);
+
+			if(MPI_Send(arr2, LENGTH, MPI_DOUBLE, i, RIGHTARR, MPI_COMM_WORLD) != MPI_SUCCESS){
+				printf("Error while sending a messange from %d to %d\n", 0, i);
+			}
+			if(MPI_Send(&arr1[leftArrPos], proccesJobSize, MPI_DOUBLE, i, LEFTARR, MPI_COMM_WORLD) != MPI_SUCCESS){
+				printf("Error while sending a messange from %d to %d\n", 0, i);
+			}
+			leftArrPos += proccesJobSize;
 		}
 		
 		MPI_Status stat;
-		int counterInputPr = 0;
 		double answerSum = 0;
 		double incomeVal;
-
 		for (int i = 0; i < size-1; ++i) {
-			MPI_Recv(&incomeVal, 1, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
-			if (stat.MPI_ERROR != MPI_SUCCESS) {
-				printf("Error while sending messange from %d by %d tag\n", stat.MPI_SOURCE, stat.MPI_TAG);
+			if (MPI_Recv(&incomeVal, 1, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &stat) != MPI_SUCCESS) {
+				printf("Error while recieving a messange from %d to 0 process\n", stat.MPI_SOURCE);
 			} 
 			else {
 				answerSum += incomeVal;
-				//++counterInputPr;
+			}
+		}
+		end = MPI_Wtime();
+
+		printf("-------------------------------------------------------\n");
+		printf("Total calculating and communication time is %f sec.\n", end - begin);
+		printf("Answer is %f\n", answerSum);
+	
+	} else {
+
+		MPI_Status stat;
+		int leftArrLen = stat.count_lo;
+		int rightArrLen = stat.count_lo;
+		double* arr1;
+		double* arr2;
+		double start, end;
+
+		start = MPI_Wtime();
+		if( MPI_Probe(0, RIGHTARR, MPI_COMM_WORLD, &stat) == MPI_SUCCESS){
+
+			rightArrLen = stat.count_lo / sizeof(double);
+			arr2 = (double*) malloc(stat.count_lo);
+
+			if( MPI_Recv(arr2, stat.count_lo, MPI_DOUBLE, 0, RIGHTARR, MPI_COMM_WORLD, &stat) != MPI_SUCCESS )
+				printf("%d process, %d tag: The error occurred while getting the messange from 0 process", rank, stat.MPI_TAG);
+
+			if( MPI_Probe(0, LEFTARR, MPI_COMM_WORLD, &stat) == MPI_SUCCESS ){
+
+				leftArrLen = stat.count_lo / sizeof(double);
+				arr1 = (double*) malloc(stat.count_lo);
+				if( MPI_Recv(arr1, stat.count_lo, MPI_DOUBLE, 0, LEFTARR, MPI_COMM_WORLD, &stat) != MPI_SUCCESS )
+					printf("%d process, %d tag: The error occurred while getting the messange from 0 process", rank, stat.MPI_TAG);
+
+			} else {
+				printf("Error while getting the left array by %d process\n", rank);
+			}
+
+		} else {
+			printf("Error while getting the right array by %d process\n", rank);
+		}
+
+		double chunkOfAnswer = 0;
+		for(int i = 0; i < leftArrLen; i++){
+			for(int j = 0; j < rightArrLen; j++){
+				chunkOfAnswer += arr1[i] * arr2[j];
 			}
 		}
 
-		printf("Answer is %f\n", answerSum);
-		free(messange);
-		free(arr1);
-		free(arr2);		
-	} else {
-		MPI_Status stat;
-		arrsData inputData;
-		double chunkOfAnswer = 0;
-		MPI_Recv(&inputData, 1, arrsDataType, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &stat);
-		double a = *inputData.left;
-		/*
-		for (double* iter = inputData.left; iter < inputData.left + inputData.lenLeft; ++iter) {
-			for(int j = 0; j < LENGTH; ++j){
-				chunkOfAnswer += *iter * (*(inputData.right + j)); 
-			}
-		}*/
-		printf("I'm %d and I'm ALIVE!\n\n", rank);
-		//читаем указатели на нужные массивы, выполняем цикл
 		MPI_Send(&chunkOfAnswer, 1, MPI_DOUBLE, 0, 321, MPI_COMM_WORLD); // отсылает 0му, что насчитала
-		printf("I'm %d of %d \n", rank, size);
+		end = MPI_Wtime();
+
+		printf("The working time of #%d process is %f sec.\n", rank, end - start);
+		free(arr1);
+		free(arr2);
 	}
 
-	//double MPI_Wtime (void)
-
-
-	/*
-		long long outputValue = 0;
-		for (int i = 0; i < len; i++) {
-				for (int j = 0; j < len; j++) {
-						outputValue += arr1[i] * arr2[j];
-				}
-		}*/
-
-	check = MPI_Finalize();
-	if (check == MPI_ERRORS_RETURN) {
-		printf("Error occurred in %d process", rank);
+	if (MPI_Finalize() == MPI_ERRORS_RETURN) {
+		printf("Error occurred in %d process while MPI_Finalize()\n", rank);
 	}
 }
