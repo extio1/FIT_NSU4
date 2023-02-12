@@ -2,11 +2,11 @@
 #include "stdlib.h"
 #include "mpi.h"
 
-#define LENGTH 15
+#define LENGTH 150000
 
 void initArr(double* arr, const int size){
 	for(int i = 0; i < size; i++)
-		arr[i] = i;
+		arr[i] = 1;
 }
 
 int defineSegmentSize(const int sizeArr, const int amProc){
@@ -36,53 +36,63 @@ int main(int argc, char** argv){
 	int size;
 	int rank;
 
-	int size1 = 0, rank1 = 0;
+	double timeStart, timeEnd;
 
 	MPI_Init(&argc, &argv);
 
-	MPI_Group universeGr;
-	MPI_Comm_group(MPI_COMM_WORLD, &universeGr);
-
-	int explNum[] = {0};
-	MPI_Group calcGr;
-	MPI_Comm calcComm;
-	if( MPI_Group_excl(universeGr, 1, explNum, &calcGr) != MPI_SUCCESS ) return 1;
-	if( MPI_Comm_create(MPI_COMM_WORLD, calcGr, &calcComm) ) return 2;
-
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	if(rank > 0){
-		MPI_Comm_size(calcComm, &size1);
-		MPI_Comm_rank(calcComm, &rank1);
-	}
 
-	printf("I'm %d of %d and %d of %d\n", rank, size, rank1, size1);
-
-	double arr[LENGTH];
-   	double arr1[LENGTH];
-	double arr2[LENGTH];
-	
+   	double* arr1Full;
+	double* arr2 = (double*) malloc(sizeof(double) * LENGTH);
+	int sendCounts[size];
+	int sendOffts[size];
 	if(rank == 0){
-		int sendCounts[size];
-		int sendOffts[size];
-		defineScatter(sendCounts, sendOffts, size, LENGTH);
-		initArr(arr1, LENGTH);
+		arr1Full = (double*) malloc(sizeof(double) * LENGTH);
+		initArr(arr1Full, LENGTH);
 		initArr(arr2, LENGTH);
 	}
 
+	timeStart = MPI_Wtime();
+
+	defineScatter(sendCounts, sendOffts, size, LENGTH);
+	double* arr1Part = (double*) malloc(sizeof(double) * sendCounts[rank]);
+
 	MPI_Bcast(arr2, LENGTH, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-	
-/*
-	MPI_Scatter(arr1, LENGTH / size, MPI_DOUBLE, 
-				arr, LENGTH / size, MPI_DOUBLE, 
-				0, MPI_COMM_WORLD);
+	MPI_Scatterv(arr1Full, sendCounts, sendOffts, MPI_DOUBLE, 
+				 arr1Part, sendCounts[rank], MPI_DOUBLE, 
+				 0, MPI_COMM_WORLD);
 
-*/
-	if(rank == 0){
-		for(int i = 0; i < size; i++){
-			printf("%d %d \n", sendCounts[i], sendOffts[i]);
+
+	double answer = 0;
+	for(int i = 0; i < sendCounts[rank]; ++i){
+		for(int j = 0; j < LENGTH; j++){
+			answer += arr1Part[i] * arr2[j];
 		}
-		printf("\n");
+	}
+
+	double ans;
+	MPI_Reduce(&answer, &ans, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+	timeEnd = MPI_Wtime();
+
+	printf("Process #%d works for %f sec.\n", rank, timeEnd - timeStart);
+	if(rank == 0){
+		printf("-------------------------------------------------------------------------\n");
+		printf("The answer is: %f\nTotal calculating and communication time is %f sec.\n", ans, timeEnd - timeStart);
+		printf("-------------------------------------------------------------------------\n");
+	} 
+		
+
+
+	free(arr1Part);
+	free(arr2);
+	if(rank == 0){
+		free(arr1Full);
+	}
+
+	if (MPI_Finalize() == MPI_ERRORS_RETURN) {
+		printf("Error occurred in %d process while MPI_Finalize()\n", rank);
 	}
 }
