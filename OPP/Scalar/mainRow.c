@@ -1,11 +1,11 @@
 #include "stdio.h"
 #include "time.h"
 
-#define LENGTH 1000
+#define LENGTH 150000
 
 void initArr(double* arr, const int size){
 	for(int i = 0; i < size; i++)
-		arr[i] = i;
+		arr[i] = 1;
 }
 
 
