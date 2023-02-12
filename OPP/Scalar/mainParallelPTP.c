@@ -2,14 +2,14 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-#define LENGTH 1000
+#define LENGTH 150000
 
 #define LEFTARR 123
 #define RIGHTARR 456
 
 void initArr(double* arr, const int size){
 	for(int i = 0; i < size; i++)
-		arr[i] = i;
+		arr[i] = 1;
 }
 
 int defineSegmentSize(const int sizeArr, const int amProc){
@@ -69,7 +69,8 @@ int main(int argc, char** argv) {
 
 		printf("-------------------------------------------------------\n");
 		printf("Total calculating and communication time is %f sec.\n", end - begin);
-		printf("Answer is %f\n", answerSum);
+		printf("The answer is %f\n", answerSum);
+		printf("-------------------------------------------------------\n");
 	
 	} else {
 
