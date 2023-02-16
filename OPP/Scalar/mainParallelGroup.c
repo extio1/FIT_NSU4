@@ -2,7 +2,7 @@
 #include "stdlib.h"
 #include "mpi.h"
 
-#define LENGTH 150000
+#define LENGTH 100000
 
 void initArr(double* arr, const int size){
 	for(int i = 0; i < size; i++)
@@ -65,25 +65,30 @@ int main(int argc, char** argv){
 				 0, MPI_COMM_WORLD);
 
 
-	double answer = 0;
+	double partAnswer = 0;
 	for(int i = 0; i < sendCounts[rank]; ++i){
 		for(int j = 0; j < LENGTH; j++){
-			answer += arr1Part[i] * arr2[j];
+			partAnswer += arr1Part[i] * arr2[j];
 		}
 	}
 
-	double ans;
-	MPI_Reduce(&answer, &ans, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	double answer;
+	MPI_Reduce(&partAnswer, &answer, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
 	timeEnd = MPI_Wtime();
+	double localTime = timeEnd - timeStart;
+	double globalTime;
 
-	printf("Process #%d works for %f sec.\n", rank, timeEnd - timeStart);
+	MPI_Reduce(&localTime, &globalTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+	
+	printf("Process #%d works for %f sec.\n", rank, localTime);
+	MPI_Barrier(MPI_COMM_WORLD);
 	if(rank == 0){
 		printf("-------------------------------------------------------------------------\n");
-		printf("The answer is: %f\nTotal calculating and communication time is %f sec.\n", ans, timeEnd - timeStart);
+		printf("The answer is: %f\nTotal calculating and communication time is %f sec.\n", answer, globalTime);
 		printf("-------------------------------------------------------------------------\n");
-	} 
-		
+	}
+
 
 
 	free(arr1Part);
