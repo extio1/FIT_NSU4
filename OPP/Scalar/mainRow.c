@@ -1,7 +1,7 @@
 #include "stdio.h"
 #include "time.h"
 
-#define LENGTH 150000
+#define LENGTH 100000
 
 void initArr(double* arr, const int size){
 	for(int i = 0; i < size; i++)
@@ -31,4 +31,3 @@ int main(){
 
 	return 0;
 }
-
