@@ -1,4 +1,4 @@
-string1
-string2
-string3
-
+DEFINE a 4
+PUSH a
+SQRT
+PRINT

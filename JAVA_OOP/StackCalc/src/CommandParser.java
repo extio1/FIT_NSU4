@@ -1,4 +1,5 @@
 import java.io.*;
+import java.util.Scanner;
 
 public class CommandParser implements AutoCloseable {
     public CommandParser()  {
@@ -16,24 +17,24 @@ public class CommandParser implements AutoCloseable {
     }
 
     public boolean ready() throws IOException {
-        return inStream.ready();
+        return inStream.hasNextLine();
     }
 
     public String nextLine() throws IOException {
-        return inStream.readLine();
+        return inStream.nextLine();
     }
 
     public void linkWithFile(String filePath) throws FileNotFoundException {
-        inStream = new BufferedReader(new FileReader(filePath));
+        inStream = new Scanner(new FileReader(filePath));
     }
     public void linkWithConsole() {
-        inStream = new BufferedReader(new InputStreamReader(System.in));
+        inStream = new Scanner(new InputStreamReader(System.in));
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         inStream.close();
     }
 
-    private BufferedReader inStream = null;
+    private Scanner inStream = null;
 }
