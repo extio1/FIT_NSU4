@@ -3,7 +3,7 @@ package operation;
 import runtimeContext.RuntimeContext;
 import stack.MyStack;
 
-public class PushD implements Operation<Double>, CustomizableOperation {
+public class PushD implements StackOperation<Double>, CustomizableOperation {
     private String arg;
 
     @Override

@@ -1,5 +1,5 @@
 import operation.Operation;
 
-public interface Calculator {
-    void execute(Operation operation);
+public interface Calculator<T> {
+    void execute(Operation<T> operation);
 }

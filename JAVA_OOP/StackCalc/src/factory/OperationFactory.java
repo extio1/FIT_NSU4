@@ -12,10 +12,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.HashSet;
 import java.util.TreeMap;
 
-public class OperationFactory {
+public class OperationFactory<T> {
     private InputStream inStr = null;
     private TreeMap<String, String> commandToClass;
-    private TreeMap<String, Operation<?>> alreadyCreated;
+    private TreeMap<String, Operation<T>> alreadyCreated;
 
     public OperationFactory() throws IOException {
         initByConfigFile("config.txt");
@@ -24,21 +24,20 @@ public class OperationFactory {
         initByConfigFile(configPath);
     }
 
-    public Operation<?> create(String opName) throws Exception {
+    public Operation<T> create(String opName) throws Exception {
         String[] commandInfo = opName.split(" ");
         String newOperationName = commandToClass.get(commandInfo[0]);
         if(newOperationName == null){
             throw new calcException.NoSuchOperation();
         }
 
-        Operation<?> operation = alreadyCreated.get(newOperationName);
-        if(operation != null){
-            if(operation instanceof CustomizableOperation op) {
-                op.set(commandInfo);
-            }
-        } else {
+        Operation<T> operation = alreadyCreated.get(newOperationName);
+        if(operation == null){
             operation = generateOperation(newOperationName);
             alreadyCreated.merge(newOperationName, operation, (x, y) -> y);
+        }
+        if(operation instanceof CustomizableOperation op) {
+            op.set(commandInfo);
         }
         return operation;
     }
@@ -46,7 +45,7 @@ public class OperationFactory {
     private void initByConfigFile(String configPath) throws IOException {
         inStr = OperationFactory.class.getResourceAsStream(configPath);
         commandToClass = new TreeMap<String, String>();
-        alreadyCreated = new TreeMap<String, Operation<?>>();
+        alreadyCreated = new TreeMap<String, Operation<T>>();
         scanConfig();
     }
 
@@ -80,9 +79,9 @@ public class OperationFactory {
         reader.close();
     }
 
-    private Operation generateOperation(String OperationName) throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        Class<?> operationT = Class.forName(OperationName);
-        Constructor<?> constructor = operationT.getConstructor();
-        return (Operation) constructor.newInstance();
+    private Operation<T> generateOperation(String OperationName) throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        Class operationT = Class.forName(OperationName);
+        Constructor constructor = operationT.getConstructor();
+        return (Operation<T>) constructor.newInstance();
     }
 }

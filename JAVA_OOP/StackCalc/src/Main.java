@@ -13,12 +13,10 @@ public class Main {
         }
 
         CalculatorDouble calculator = new CalculatorDouble();
-        OperationFactory factory = new OperationFactory();
+        OperationFactory<Double> factory = new OperationFactory<>();
 
-        Operation operation = factory.create("DEFINE A 8");
-        Operation<Double> operation2 = factory.create("PUSH 3,14");
+        Operation<Double> operation = factory.create("DEFINE A 8");
+        Operation<Double> operation2 = factory.create("PUSH 3.14");
         calculator.execute(operation2);
-
-
     }
 }
