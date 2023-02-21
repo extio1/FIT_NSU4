@@ -1,0 +1,9 @@
+POP=operation.PopD;
+PUSH=operation.PushD;
++=operation.PlusD;
+-=operation.MinusD;
+*=operation.ProductD;
+/=operation.DivisionD;
+SQRT=operation.SqrtD;
+PRINT=operation.PrintD;
+DEFINE=operation.DefineD;
