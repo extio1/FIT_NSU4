@@ -1,10 +1,8 @@
 package calcException;
 
-public class FactoryException extends Exception{
-    FactoryException(){
-        super("The try of making unknown operation");
-    }
-    FactoryException(operation.Operation op){
-        super("The operation "+op.toString()+"doesn't exist.");
-    }
+public class FactoryException extends Throwable{
+   @Override
+   public String getMessage(){
+       return "FactoryException.\n";
+   }
 }

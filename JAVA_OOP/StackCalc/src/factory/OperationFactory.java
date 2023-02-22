@@ -1,5 +1,7 @@
 package factory;
 
+import calcException.ConfigFileHaventOpened;
+import calcException.ConfigFileParseError;
 import calcException.NoSuchOperation;
 import operation.CustomizableOperation;
 import operation.Operation;
@@ -17,18 +19,18 @@ public class OperationFactory<T> {
     private TreeMap<String, String> commandToClass;
     private TreeMap<String, Operation<T>> alreadyCreated;
 
-    public OperationFactory() throws IOException {
+    public OperationFactory() throws ConfigFileParseError, ConfigFileHaventOpened {
         initByConfigFile("config.txt");
     }
-    public OperationFactory(String configPath) throws IOException {
+    public OperationFactory(String configPath) throws ConfigFileParseError, ConfigFileHaventOpened {
         initByConfigFile(configPath);
     }
 
-    public Operation<T> create(String opName) throws Exception {
+    public Operation<T> create(String opName) throws Exception, NoSuchOperation {
         String[] commandInfo = opName.split(" ");
         String newOperationName = commandToClass.get(commandInfo[0]);
         if(newOperationName == null){
-            throw new calcException.NoSuchOperation();
+            throw new NoSuchOperation(opName);
         }
 
         Operation<T> operation = alreadyCreated.get(newOperationName);
@@ -42,11 +44,19 @@ public class OperationFactory<T> {
         return operation;
     }
 
-    private void initByConfigFile(String configPath) throws IOException {
+    private void initByConfigFile(String configPath) throws ConfigFileHaventOpened, ConfigFileParseError {
         inStr = OperationFactory.class.getResourceAsStream(configPath);
+        if(inStr == null){
+            throw new ConfigFileHaventOpened(configPath);
+        }
         commandToClass = new TreeMap<String, String>();
         alreadyCreated = new TreeMap<String, Operation<T>>();
-        scanConfig();
+
+        try {
+            scanConfig();
+        } catch(IOException e){
+            throw new ConfigFileParseError(configPath, 0);
+        }
     }
 
     private void scanConfig() throws IOException {

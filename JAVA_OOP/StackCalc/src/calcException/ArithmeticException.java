@@ -1,7 +1,8 @@
 package calcException;
 
-public class ArithmeticException extends Exception{
-    ArithmeticException(){
-        super("The exception raised in arithmetic operation.\n");
+public class ArithmeticException extends Throwable{
+    @Override
+    public String getMessage(){
+        return "Arithmetic Exception";
     }
 }
