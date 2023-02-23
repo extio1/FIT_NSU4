@@ -1,12 +1,12 @@
 package operation;
 
+import calcException.ReferenceToEmptyStack;
 import runtimeContext.RuntimeContext;
-import runtimeContext.RuntimeContextD;
 import stack.MyStack;
 
 public class PrintD implements StackOperation<Double>{
     @Override
-    public void apply(MyStack<Double> stack, RuntimeContext<Double> context) {
+    public void apply(MyStack<Double> stack, RuntimeContext<Double> context) throws ReferenceToEmptyStack {
         stack.print();
     }
 

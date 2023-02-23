@@ -1,28 +1,31 @@
-import calcException.ConfigFileHaventOpened;
-import calcException.ConfigFileParseError;
-import calcException.NoSuchOperation;
-import calcException.NotEnoughOperands;
+import calcException.*;
 import factory.OperationFactory;
-import operation.ArithmeticOperation;
 import operation.Operation;
-
-import java.lang.reflect.Constructor;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        try(CommandParser parser = new CommandParser(args)) {
+        args = new String[]{"C:/Users/User/IdeaProjects/FIT_NSU4/JAVA_OOP/StackCalc/src/input.txt"};
+        try (CommandParser parser = new CommandParser(args)) {
             CalculatorDouble calculator = new CalculatorDouble();
             OperationFactory<Double> factory = new OperationFactory<>();
 
+            System.out.println("Ready to execute commands!");
+
             while (parser.ready()) {
                 String command = parser.nextLine();
-                Operation<Double> op = factory.create(command);
-                calculator.execute(op);
+                if (parser.exit()){
+                    break;
+                }
+                try {
+                    Operation<Double> op = factory.create(command);
+                    calculator.execute(op);
+                } catch (NoSuchOperation | OperationInstantiationError |
+                         NoOperationConstructor | OperationConfigurationError e) {
+                    System.out.println(e.getMessage());
+                }
             }
-
-        } catch (ConfigFileHaventOpened | NoSuchOperation | NotEnoughOperands | ConfigFileParseError e) {
-            System.out.println(e.getMessage());
-        } catch (Exception e) {
+            System.out.println("Shutting down.");
+        } catch (ConfigurationError e) {
             System.out.println(e.getMessage());
         }
     }

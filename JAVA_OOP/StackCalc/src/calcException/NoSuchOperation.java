@@ -1,9 +1,11 @@
 package calcException;
 
-public class NoSuchOperation extends FactoryException{
-    public NoSuchOperation(String wrongOperationName){
-
+public class NoSuchOperation extends CreationError{
+    public NoSuchOperation(String _wrongOperationName){
+        super(_wrongOperationName);
     }
-
-    private String wrongOperationName;
+    @Override
+    public String getMessage(){
+        return "Operation doesn't exist <- "+super.getMessage();
+    }
 }

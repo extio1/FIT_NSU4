@@ -1,5 +1,7 @@
 package operation;
 
+import calcException.NotEnoughOperandToConfigure;
+import calcException.OperationConfigurationError;
 import runtimeContext.RuntimeContext;
 import stack.MyStack;
 
@@ -12,9 +14,9 @@ public class DefineD implements ContextOperation<Double>, CustomizableOperation{
     }
 
     @Override
-    public void set(String[] option) throws Exception {
+    public void set(String[] option) throws OperationConfigurationError {
         if(option.length != 3){
-            throw new Exception();
+            throw new NotEnoughOperandToConfigure(this);
         } else {
             key = option[1];
             value = Double.parseDouble(option[2]);

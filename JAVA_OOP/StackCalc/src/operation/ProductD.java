@@ -1,12 +1,18 @@
 package operation;
 
+import calcException.OperationNotEnoughOperands;
+import calcException.ReferenceToEmptyStack;
 import stack.MyStack;
 
 public class ProductD implements ArithmeticOperation<Double> {
     @Override
-    public void apply(MyStack<Double> stack) {
-        double secondOp = stack.pop();
-        double firstOp = stack.pop();
-        stack.push(firstOp * secondOp);
+    public void apply(MyStack<Double> stack) throws OperationNotEnoughOperands{
+        try {
+            double secondOp = stack.pop();
+            double firstOp = stack.pop();
+            stack.push(firstOp * secondOp);
+        } catch (ReferenceToEmptyStack e){
+            throw new OperationNotEnoughOperands(this);
+        }
     }
 }

@@ -1,17 +1,13 @@
 package calcException;
 
-public class ConfigFileHaventOpened extends FactoryException{
+public class ConfigFileHaventOpened extends ConfigurationError{
     public ConfigFileHaventOpened(String _filename){
-        filename = _filename;
-    }
-    public String getConfigName(){
-        return filename;
+        super(_filename);
     }
 
     @Override
     public String getMessage(){
-        return "File <"+filename+"> have not opened.\n";
+        return "File have not opened <-"+super.getMessage()+"> ";
     }
 
-    private final String filename;
 }

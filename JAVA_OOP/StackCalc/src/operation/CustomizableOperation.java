@@ -1,5 +1,7 @@
 package operation;
 
+import calcException.OperationConfigurationError;
+
 public interface CustomizableOperation {
-    void set(String[] option) throws Exception;
+    void set(String[] option) throws OperationConfigurationError;
 }

@@ -1,8 +1,6 @@
 package factory;
 
-import calcException.ConfigFileHaventOpened;
-import calcException.ConfigFileParseError;
-import calcException.NoSuchOperation;
+import calcException.*;
 import operation.CustomizableOperation;
 import operation.Operation;
 import java.io.IOException;
@@ -11,7 +9,6 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashSet;
 import java.util.TreeMap;
 
 public class OperationFactory<T> {
@@ -19,14 +16,14 @@ public class OperationFactory<T> {
     private TreeMap<String, String> commandToClass;
     private TreeMap<String, Operation<T>> alreadyCreated;
 
-    public OperationFactory() throws ConfigFileParseError, ConfigFileHaventOpened {
+    public OperationFactory() throws ConfigurationError {
         initByConfigFile("config.txt");
     }
-    public OperationFactory(String configPath) throws ConfigFileParseError, ConfigFileHaventOpened {
+    public OperationFactory(String configPath) throws ConfigurationError {
         initByConfigFile(configPath);
     }
 
-    public Operation<T> create(String opName) throws Exception, NoSuchOperation {
+    public Operation<T> create(String opName) throws NoSuchOperation, OperationInstantiationError, NoOperationConstructor, OperationConfigurationError {
         String[] commandInfo = opName.split(" ");
         String newOperationName = commandToClass.get(commandInfo[0]);
         if(newOperationName == null){
@@ -44,54 +41,70 @@ public class OperationFactory<T> {
         return operation;
     }
 
-    private void initByConfigFile(String configPath) throws ConfigFileHaventOpened, ConfigFileParseError {
+    private void initByConfigFile(String configPath) throws ConfigurationError {
         inStr = OperationFactory.class.getResourceAsStream(configPath);
         if(inStr == null){
-            throw new ConfigFileHaventOpened(configPath);
+            throw new ConfigurationError(configPath);
         }
         commandToClass = new TreeMap<String, String>();
         alreadyCreated = new TreeMap<String, Operation<T>>();
 
         try {
             scanConfig();
-        } catch(IOException e){
-            throw new ConfigFileParseError(configPath, 0);
+        } catch(ConfigFileParseError e){
+            e.setFileName(configPath);
+            throw new ConfigurationError(configPath);
         }
     }
 
-    private void scanConfig() throws IOException {
-        Reader reader = new InputStreamReader(inStr);
+    private void scanConfig() throws ConfigFileParseError {
         final char DELIMITER_WORD = '=';
         final char DELIMITER_LINE = ';';
+        int rowCounter = 0;
+        int colCounter = 0;
 
         StringBuilder builder = new StringBuilder();
         String key = "";
         String value = "";
 
-        while(reader.ready()){
-
-            char symbol = (char) reader.read();
-            if(!Character.isISOControl(symbol)) {
-                if (symbol == DELIMITER_WORD) {
-                    key = builder.toString();
-                    builder.setLength(0);
-                } else if (symbol == DELIMITER_LINE) {
-                    value = builder.toString();
-                    commandToClass.put(key, value);
-                    alreadyCreated.put(value, null);
-                    builder.setLength(0);
-                } else {
-                    builder.append(symbol);
+        try(Reader reader = new InputStreamReader(inStr)) {
+            while (reader.ready()) {
+                char symbol = (char) reader.read();
+                if (!Character.isISOControl(symbol)) {
+                    if (symbol == DELIMITER_WORD) {
+                        key = builder.toString();
+                        builder.setLength(0);
+                    } else if (symbol == DELIMITER_LINE) {
+                        value = builder.toString();
+                        commandToClass.put(key, value);
+                        alreadyCreated.put(value, null);
+                        builder.setLength(0);
+                        ++colCounter;
+                    } else {
+                        builder.append(symbol);
+                    }
+                    ++colCounter;
                 }
             }
+        } catch (IOException e){
+            throw new ConfigFileParseError(colCounter, rowCounter);
         }
 
-        reader.close();
     }
 
-    private Operation<T> generateOperation(String OperationName) throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        Class operationT = Class.forName(OperationName);
-        Constructor constructor = operationT.getConstructor();
-        return (Operation<T>) constructor.newInstance();
+    private Operation<T> generateOperation(String OperationName) throws NoSuchOperation, NoOperationConstructor, OperationInstantiationError {
+        Operation<T> newOperation = null;
+        try {
+            Class operationT = Class.forName(OperationName);
+            Constructor constructor = operationT.getConstructor();
+            newOperation = (Operation<T>) constructor.newInstance();
+        } catch(ClassNotFoundException e) {
+            throw new NoSuchOperation(OperationName);
+        } catch(NoSuchMethodException e){
+            throw new NoOperationConstructor(OperationName);
+        } catch(InstantiationException | IllegalAccessException | InvocationTargetException e){
+            throw new OperationInstantiationError(OperationName, e);
+        }
+        return newOperation;
     }
 }

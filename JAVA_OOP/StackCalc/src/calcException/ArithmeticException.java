@@ -1,8 +1,13 @@
 package calcException;
 
-public class ArithmeticException extends Throwable{
+import operation.Operation;
+
+public class ArithmeticException extends OperationException{
+    ArithmeticException(Operation<?> op){
+        super(op);
+    }
     @Override
     public String getMessage(){
-        return "Arithmetic Exception";
+        return " Arithmetic Exception <-" + super.getMessage();
     }
 }

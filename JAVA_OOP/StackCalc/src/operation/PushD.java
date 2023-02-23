@@ -1,5 +1,6 @@
 package operation;
 
+import calcException.NotEnoughOperandToConfigure;
 import runtimeContext.RuntimeContext;
 import stack.MyStack;
 
@@ -12,9 +13,9 @@ public class PushD implements StackOperation<Double>, CustomizableOperation {
     }
 
     @Override
-    public void set(String[] option) throws Exception {
+    public void set(String[] option) throws NotEnoughOperandToConfigure {
         if(option.length != 2){
-            throw new Exception();
+            throw new NotEnoughOperandToConfigure(this);
         } else {
             arg = option[1];
         }

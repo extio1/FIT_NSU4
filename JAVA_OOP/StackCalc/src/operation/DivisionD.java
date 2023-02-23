@@ -1,16 +1,22 @@
 package operation;
 
-import calcException.NotEnoughOperands;
+import calcException.OperationNotEnoughOperands;
+import calcException.OperationZeroDivision;
+import calcException.ReferenceToEmptyStack;
 import stack.MyStack;
 
 public class DivisionD implements ArithmeticOperation<Double> {
     @Override
-    public void apply(MyStack<Double> stack) throws NotEnoughOperands {
-        Double secondOp = stack.pop();
-        Double firstOp = stack.pop();
-        if(firstOp == null || secondOp == null){
-            throw new NotEnoughOperands();
+    public void apply(MyStack<Double> stack) throws OperationNotEnoughOperands, OperationZeroDivision {
+        try {
+            double secondOp = stack.pop();
+            double firstOp = stack.pop();
+            if(secondOp == 0){
+                throw new OperationZeroDivision(this);
+            }
+            stack.push(firstOp / secondOp);
+        } catch (ReferenceToEmptyStack e){
+            throw new OperationNotEnoughOperands(this);
         }
-        stack.push(firstOp / secondOp);
     }
 }

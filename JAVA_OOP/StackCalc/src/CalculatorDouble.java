@@ -1,4 +1,7 @@
-import calcException.NotEnoughOperands;
+
+import calcException.OperationException;
+import calcException.OperationNotEnoughOperands;
+import calcException.ReferenceToEmptyStack;
 import operation.ArithmeticOperation;
 import operation.ContextOperation;
 import operation.Operation;
@@ -12,15 +15,29 @@ public class CalculatorDouble implements Calculator<Double> {
     private final RuntimeContextD context = new RuntimeContextD();
 
     @Override
-    public void execute(Operation<Double> operation) throws NotEnoughOperands {
+    public void execute(Operation<Double> operation) {
         if(operation instanceof ArithmeticOperation){
-            operation.apply(stack);
+            try {
+                operation.apply(stack);
+            } catch (OperationException e){
+                System.out.println(e.getMessage());
+            }
         }
         else if (operation instanceof StackOperation){
-            operation.apply(stack, context);
+            try {
+                operation.apply(stack, context);
+            } catch (ReferenceToEmptyStack e) {
+                System.out.println(e.getMessage());
+            } catch (OperationException e) {
+                System.out.println(e.getMessage());
+            }
         }
         else if (operation instanceof ContextOperation){
-            operation.apply(context);
+            try {
+                operation.apply(context);
+            } catch (OperationException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }
