@@ -8,7 +8,7 @@ public class OperationException extends Throwable{
     }
     @Override
     public String getMessage(){
-        return " Operation <"+operationName+"> error. ";
+        return "Operation <"+operationName+"> error. ";
     }
 
     final String operationName;
