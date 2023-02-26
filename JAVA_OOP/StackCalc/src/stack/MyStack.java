@@ -7,7 +7,7 @@ import java.util.EmptyStackException;
 import java.util.Stack;
 
 public class MyStack<T> {
-    private Stack<T> data = new Stack<>();
+    private final Stack<T> data = new Stack<>();
 
     public void push(T value){
         data.push(value);
@@ -23,13 +23,12 @@ public class MyStack<T> {
         return value;
     }
 
-    public void print() throws ReferenceToEmptyStack{
+    public void print() throws ReferenceToEmptyStack {
         try{
             System.out.println(data.peek());
         } catch(EmptyStackException e) {
             throw new ReferenceToEmptyStack();
         }
-
     }
 
 }
