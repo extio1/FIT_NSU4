@@ -12,7 +12,7 @@ public class ConfigurationError extends FactoryException{
 
     @Override
     public String getMessage(){
-        return "Fabric configuration error with config file <"+configName+"> \n";
+        return "Fabric configuration error with config file <"+configName+"> <- "+super.getMessage();
     }
 
     String configName;
