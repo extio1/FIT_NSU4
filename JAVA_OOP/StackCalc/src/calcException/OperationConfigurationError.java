@@ -2,10 +2,11 @@ package calcException;
 
 
 import operation.CustomizableOperation;
+import operation.Operation;
 
 public class OperationConfigurationError extends Throwable {
-    OperationConfigurationError(CustomizableOperation operation){
-        opName = operation.toString();
+    OperationConfigurationError(CustomizableOperation _operation){
+        opName = _operation.toString();
     }
 
     @Override
@@ -14,5 +15,4 @@ public class OperationConfigurationError extends Throwable {
     }
 
     final String opName;
-
 }
