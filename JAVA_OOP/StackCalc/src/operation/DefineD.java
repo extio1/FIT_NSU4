@@ -2,8 +2,10 @@ package operation;
 
 import calcException.NotEnoughOperandToConfigure;
 import calcException.OperationConfigurationError;
+import main.Main;
 import runtimeContext.RuntimeContext;
-import stack.MyStack;
+
+import java.util.logging.Level;
 
 public class DefineD implements ContextOperation<Double>, CustomizableOperation{
     private String key;
@@ -11,6 +13,7 @@ public class DefineD implements ContextOperation<Double>, CustomizableOperation{
     @Override
     public void apply(RuntimeContext<Double> context) {
         context.define(key, value);
+        Main.logger.log(Level.INFO, this.toString()+" defined "+key+" as "+value);
     }
 
     @Override
@@ -20,6 +23,7 @@ public class DefineD implements ContextOperation<Double>, CustomizableOperation{
         } else {
             key = option[1];
             value = Double.parseDouble(option[2]);
+            Main.logger.log(Level.INFO, this.toString()+" is configured by "+key+" - "+value);
         }
     }
 }
