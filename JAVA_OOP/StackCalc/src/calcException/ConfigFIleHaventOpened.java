@@ -7,7 +7,7 @@ public class ConfigFileHaventOpened extends ConfigurationError{
 
     @Override
     public String getMessage(){
-        return "File have not opened <-"+super.getMessage()+"> ";
+        return "File have not opened <- "+super.getMessage();
     }
 
 }
