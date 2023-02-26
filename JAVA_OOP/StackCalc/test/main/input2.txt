@@ -1,0 +1,11 @@
+#comment comment
+#POP
+#PUSH
+DEFINE a 4
+PUSH a
+#COMMENT
+SQRT
+#/
+#POP
+PRINT
+#LAST WORD
