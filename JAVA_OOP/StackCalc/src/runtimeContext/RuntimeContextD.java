@@ -5,12 +5,13 @@ import java.util.TreeMap;
 public class RuntimeContextD implements RuntimeContext<Double> {
     private final TreeMap<String, Double> data = new TreeMap<>();
 
+    @Override
     public void define(String key, Double value) {
-        data.merge(key, value, (x, y) -> x);
+        data.merge(key, value, (x, y) -> y);
     }
 
     @Override
-    public Double getIfDefined(String key) {
-        return Objects.requireNonNullElseGet(data.get(key), () -> Double.parseDouble(key));
+    public Double getIfDefined(String key){
+        return data.get(key);
     }
 }
