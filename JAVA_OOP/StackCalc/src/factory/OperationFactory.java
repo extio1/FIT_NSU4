@@ -1,15 +1,16 @@
 package factory;
 
 import calcException.*;
+import main.Main;
 import operation.CustomizableOperation;
 import operation.Operation;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
+
+import java.io.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import java.util.TreeMap;
+import java.util.logging.Level;
 
 public class OperationFactory<T> {
     private InputStream inStr = null;
@@ -34,6 +35,8 @@ public class OperationFactory<T> {
         if(operation == null){
             operation = generateOperation(newOperationName);
             alreadyCreated.merge(newOperationName, operation, (x, y) -> y);
+        } else {
+            Main.logger.log(Level.INFO, newOperationName+" already created, returned an existing object "+operation.toString());
         }
         if(operation instanceof CustomizableOperation op) {
             op.set(commandInfo);
@@ -44,7 +47,7 @@ public class OperationFactory<T> {
     private void initByConfigFile(String configPath) throws ConfigurationError {
         inStr = OperationFactory.class.getResourceAsStream(configPath);
         if(inStr == null){
-            throw new ConfigurationError(configPath);
+            throw new ConfigFileHaventOpened(configPath);
         }
         commandToClass = new TreeMap<String, String>();
         alreadyCreated = new TreeMap<String, Operation<T>>();
@@ -105,6 +108,7 @@ public class OperationFactory<T> {
         } catch(InstantiationException | IllegalAccessException | InvocationTargetException e){
             throw new OperationInstantiationError(OperationName, e);
         }
+        Main.logger.log(Level.INFO, newOperation.toString()+" is generated");
         return newOperation;
     }
 }
