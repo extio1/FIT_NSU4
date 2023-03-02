@@ -1,53 +1,100 @@
-#include <iostream>
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
 #include "matrixio.h"
-using namespace std;
 
+#define DIMENSION 4
+#define TAU 0.01
 #define EPSILON 0.00005
-#define TAY 0.01
 
-void prod_mat_line(double* mat, double* line, const int dim) {
-	static double* staticLine = (double*)malloc(sizeof(double) * dim);
-	for (int i = 0; i < dim; ++i) {
-		staticLine[i] = line[i];
-		line[i] += staticLine[i] * mat[i * dim];
-	}
-	for (int i = 1; i < dim; ++i) {
-		for (int j = 0; j < dim; ++j) {
-			line[j] += line[j] * mat[i * dim + j];
+
+typedef struct SlayData{
+	double* lineCurr;
+	double* lineNext;
+	double* lineAnswer;
+	double* matrix;
+} SlayData;
+
+void swapPointers(double** p1, double** p2){
+	double* temp = *p1;
+	*p1 = *p2;
+	*p2 = temp;
+}
+
+void prodMatLine(const double* mat, const double* oldLine, double* newLine){
+	for (int i = 0; i < DIMENSION; ++i) {
+		newLine[i] = 0;
+		for (int j = 0; j < DIMENSION; ++j) {
+			newLine[i] += oldLine[j] * mat[i * DIMENSION + j];
 		}
 	}
 }
 
-void prod_scal_line(double scal, double* line, int dim) {
-	for (int i = 0; i < dim; ++i) {
+void prodScalLine(const double scal, double* line) {
+	for (int i = 0; i < DIMENSION; ++i) {
 		line[i] *= scal;
 	}
 }
 
-void minus_line_line(double* line1, double* line2, int dim) {
-	for (int i = 0; i < dim; ++i) {
+//minusLineLine(x2, x1) : (x2 - x1) --result--> x2
+void minusLineLine(double* line2, const double* line1) {
+	for (int i = 0; i < DIMENSION; ++i) {
 		line2[i] -= line1[i];
 	}
 }
 
+//lineNext = x(n+1), lineCurr = x(n)
+void step(SlayData* data){
+	prodMatLine(data->matrix, data->lineCurr, data->lineNext);
+	minusLineLine(data->lineNext, data->lineAnswer);
+	prodScalLine(TAU, data->lineNext);
+	minusLineLine(data->lineNext, data->lineCurr);
+	swapPointers(&(data->lineCurr), &(data->lineNext));
+}
+
+double measure(const double* line){
+	double measure = 0;
+	for(int i = 0; i < DIMENSION; ++i){
+		double xi = line[i];
+		measure += xi*xi;
+	}
+	return sqrt(measure);
+}
+
+bool conditionExit(const SlayData* data){
+	prodMatLine(data->matrix, data->lineCurr, data->lineNext);
+	minusLineLine(data->lineNext, data->lineAnswer);
+	//printf("%f", (measure(data->lineNext) / measure(data->lineAnswer)));
+	return (measure(data->lineNext) / measure(data->lineAnswer)) >= EPSILON;
+}
+
+
 int main() {
-	constexpr int dimension = 10;
-	double* mat = (double*) malloc(sizeof(double) * (dimension * dimension));
-	double* lineInitial = (double*)malloc(sizeof(double) * dimension);
-	double* lineAnswer = (double*)malloc(sizeof(double) * dimension);
 
-	entryMatrix(mat, dimension, "mat.txt");
-	entryLine(lineInitial, dimension, "lineInitial.txt");
-	entryLine(lineAnswer, dimension, "lineAnswer.txt");
+	double* mat = (double*) malloc(sizeof(double) * (DIMENSION * DIMENSION));
+	double* lineCurr = (double*)malloc(sizeof(double) * DIMENSION);
+	double* lineNext = (double*)malloc(sizeof(double) * DIMENSION);
+	double* lineAnswer = (double*)malloc(sizeof(double) * DIMENSION);
 
-	printLine(lineInitial, dimension);
-	prod_mat_line(mat, lineInitial, dimension);
+	entryMatrix(mat, DIMENSION, "coefMatrix.txt");
+	entryLine(lineCurr, DIMENSION, "lineInitial.txt");
+	entryLine(lineAnswer, DIMENSION, "lineAnswer.txt");
 
-	//printMatrix(mat, dimension);
-	printLine(lineInitial, dimension);
+	SlayData data = {lineCurr, lineNext, lineAnswer, mat};
+
+	while(conditionExit(&data)){
+		step(&data);
+	}
+	
+
+	printLine(data.lineCurr, DIMENSION);
+	prodMatLine(data.matrix, data.lineCurr, data.lineNext);
+	printLine(data.lineNext, DIMENSION);
 
 
 	free(mat);
-	free(lineInitial);
+	free(lineAnswer);
+	free(lineCurr);
+	free(lineNext);
 	return 0;
 }
