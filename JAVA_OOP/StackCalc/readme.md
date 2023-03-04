@@ -18,5 +18,5 @@ PUSH a<br>
 SQRT<br>
 PRINT<br>
 <h3>Ссылки</h3>
-<a href="https://lucid.app/lucidchart/61d4a2ec-ccad-4b1a-ae34-2ebd20c40bcc/edit?beaconFlowId=D19132EC1964653E&invitationId=inv_af10274d-db6d-43c1-87d3-0fab04b49c84&page=HWEp-vi-RSFO#">Архитектура приложения.</a><br>
-<a href="[https://lucid.app/lucidchart/61d4a2ec-ccad-4b1a-ae34-2ebd20c40bcc/edit?beaconFlowId=D19132EC1964653E&invitationId=inv_af10274d-db6d-43c1-87d3-0fab04b49c84&page=HWEp-vi-RSFO#)](https://lucid.app/lucidchart/f63328ca-a736-4526-ba17-1af12e498e89/edit?beaconFlowId=63F9C749C5D0C2B2&invitationId=inv_253579e9-c1dc-486b-bb66-1cd36590336e&page=HWEp-vi-RSFO#](https://lucid.app/lucidchart/f63328ca-a736-4526-ba17-1af12e498e89/edit?page=HWEp-vi-RSFO&invitationId=inv_253579e9-c1dc-486b-bb66-1cd36590336e#)">Иерархия исключений.</a><br>
+<a href="https://lucid.app/lucidchart/61d4a2ec-ccad-4b1a-ae34-2ebd20c40bcc/edit?invitationId=inv_af10274d-db6d-43c1-87d3-0fab04b49c84">Архитектура приложения.</a><br>
+<a href="https://lucid.app/lucidchart/f63328ca-a736-4526-ba17-1af12e498e89/edit?invitationId=inv_253579e9-c1dc-486b-bb66-1cd36590336e)">Иерархия исключений.</a><br>
