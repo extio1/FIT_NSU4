@@ -5,10 +5,10 @@
 #include <iostream>
 
 #define MAXITERATION 100000
-#define TAU 0.01
+#define TAU -0.01
 #define EPSILON 0.00005
-#define DIMENSION 5
-#define PRECISION 500
+#define DIMENSION 600
+#define PRECISION 5
 
 typedef struct SlayData {
 	double* lineCurr;
@@ -92,33 +92,32 @@ bool exitFunction(SlayData* data, ScattervParam* vecParam, const double exitCons
 	}
 
 	double exitSum = 0;
-	std::cout << localExitSum << std::endl;
 	MPI_Allreduce(&localExitSum, &exitSum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-	std::cout << "EXIT:" << exitSum << std::endl;
-	//printf("%f\n", exitSum);
-
-/*
-	//собираем во всех процессах TAU*MATRIX*Xn
-	MPI_Allgatherv(data.lineBuffer, vecParam.size[rank], MPI_DOUBLE,
-				data.lineBuffer, vecParam.size, vecParam.offset, 
-				MPI_DOUBLE, MPI_COMM_WORLD);
-*/
 	
 	if(exitSum < exitConstant){
 		++precisionCounter;
 	} else {
-		++precisionCounter;
-		//precisionCounter = 0;
+		precisionCounter = 0;
 	}
-
-	//printf("%d\n", precisionCounter);
+	printf("%d %f\n", precisionCounter, exitSum);
 	return precisionCounter < PRECISION;
-	//return false;
+}
+
+void printTimeProcesses(double timeStart, double timeEnd, int rank){
+	double localTime = timeEnd - timeStart;
+	double globalTime;
+
+	MPI_Reduce(&localTime, &globalTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+	
+	printf("Process #%d works for %f sec.\n", rank, localTime);
+	if(rank == 0){
+		printf("---------------------------\nTotal program calculating time: %f", globalTime);
+	}
 }
 
 int main(int argc, char** argv){
 	int size, rank;
-	double end, start;
+	double timeStart, timeEnd;
 
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -131,25 +130,27 @@ int main(int argc, char** argv){
 	ScattervParam matParam = {size1, offset1};
 	ScattervParam vecParam = {size2, offset2};
 
-	defineScatter(&vecParam, &matParam, size);
-
 	double* matrixBuff;
 	double* answerBuff;
-
-	SlayData localData;
-	localData.matrix = (double*) malloc(sizeof(double)*matParam.size[rank]);
-	localData.lineCurr = (double*) malloc(sizeof(double)*DIMENSION);
-	localData.lineBuffer = (double*) malloc(sizeof(double)*DIMENSION);
-	localData.lineAnswer = (double*) malloc(sizeof(double)*vecParam.size[rank]);
-	//printf("%p\n%p\n%p\n%p\n", mat, lineCurr, lineBuffer, lineAnswer);
-
-	initZeroArr(localData.lineCurr, DIMENSION);
+	
 	if(rank == 0){
 		matrixBuff = (double*) malloc(sizeof(double)*(DIMENSION*DIMENSION));
 		answerBuff = (double*) malloc(sizeof(double)*(DIMENSION));
 		entryMatrix(matrixBuff, DIMENSION, "coefMatrix.txt");
 		entryLine(answerBuff, DIMENSION, "lineAnswer.txt");
 	}
+
+	timeStart = MPI_Wtime();
+
+	defineScatter(&vecParam, &matParam, size);
+
+	SlayData localData;
+	localData.matrix = (double*) malloc(sizeof(double)*matParam.size[rank]);
+	localData.lineCurr = (double*) malloc(sizeof(double)*DIMENSION);
+	localData.lineBuffer = (double*) malloc(sizeof(double)*DIMENSION);
+	localData.lineAnswer = (double*) malloc(sizeof(double)*vecParam.size[rank]);
+
+	initZeroArr(localData.lineCurr, DIMENSION);
 
 	MPI_Scatterv(matrixBuff, matParam.size, matParam.offset, MPI_DOUBLE, 
 				localData.matrix, matParam.size[rank], MPI_DOUBLE, 
@@ -163,36 +164,35 @@ int main(int argc, char** argv){
 	multScalArr(localData.matrix, TAU, matParam.size[rank]);
 	multScalArr(localData.lineAnswer, TAU, vecParam.size[rank]);
 
-	int interationCounter = 0;
+	int iterationCounter = 0;
 
 	//помимо определения момента выхода из цикла exitFunction 
 	//подсчитывает локальный A*Xn и складывает результать в data.lineBuffer
 	while(exitFunction(&localData, &vecParam, exitConstant, rank)){
 		for(int i = 0; i < vecParam.size[rank]; ++i){ // этот цикл определяет локальный Xn - T*A*Xn + T*B
-			localData.lineBuffer[i] = localData.lineCurr[i] - localData.lineBuffer[i] + localData.lineAnswer[i]; 
+			localData.lineBuffer[i] = localData.lineCurr[i+vecParam.offset[rank]] - localData.lineBuffer[i] + localData.lineAnswer[i]; 
 		}
-		MPI_Barrier(MPI_COMM_WORLD);
-		
-		//printf("%d ", rank);
-		
-		//printLine(localData.lineCurr, vecParam.size[rank]);
+
 		MPI_Allgatherv(localData.lineBuffer, vecParam.size[rank], MPI_DOUBLE,
 				localData.lineCurr, vecParam.size, vecParam.offset, 
 				MPI_DOUBLE, MPI_COMM_WORLD);
 
-		//printLine(localData.lineCurr, DIMENSION);
-
-		++interationCounter;
-		if(interationCounter >= MAXITERATION){
-			printf("No converge for %d iteration!\n", interationCounter);
+		++iterationCounter;
+		if(iterationCounter >= MAXITERATION){
+			printf("No converge for %d iteration!\n", iterationCounter);
 			return 0;
 		}
 	}
 
+	timeEnd = MPI_Wtime();
+	printTimeProcesses(timeStart, timeEnd, rank);
+	MPI_Barrier(MPI_COMM_WORLD);
 	if(rank == 0){
 		free(matrixBuff);
 		free(answerBuff);
-		printLine(localData.lineCurr,DIMENSION);
+
+		printf("%d iterations to convergence.", iterationCounter);
+		writeBinary(localData.lineCurr, DIMENSION);
 	}
 
 	free(localData.matrix);
