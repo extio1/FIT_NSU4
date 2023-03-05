@@ -2,12 +2,13 @@
 #include <stdio.h>
 #include <mpi.h>
 #include "matrixio.h"
+#include <iostream>
 
-#define MAXITERATION 1000
+#define MAXITERATION 100000
 #define TAU 0.01
-#define EPSILON 0.000005
+#define EPSILON 0.00005
 #define DIMENSION 5
-#define PRECISION 5
+#define PRECISION 500
 
 typedef struct SlayData {
 	double* lineCurr;
@@ -83,14 +84,18 @@ bool exitFunction(SlayData* data, ScattervParam* vecParam, const double exitCons
 	for(int i = 0; i < vecParam->size[rank]; ++i){
 		data->lineBuffer[i] = 0;
 		for(int j = 0; j < DIMENSION; ++j){
-			data->lineBuffer[i] += data->lineCurr[i] * data->matrix[i * DIMENSION + j]; 
+			data->lineBuffer[i] += data->lineCurr[j] * data->matrix[i * DIMENSION + j]; 
 		}
-		double localExitSumSqrt = data->lineBuffer[i] - data->lineAnswer[i];
-		localExitSum += localExitSumSqrt * localExitSumSqrt;
+		
+		double localExitSumt = data->lineBuffer[i] - data->lineAnswer[i];
+		localExitSum += localExitSumt * localExitSumt;
 	}
 
 	double exitSum = 0;
+	std::cout << localExitSum << std::endl;
 	MPI_Allreduce(&localExitSum, &exitSum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	std::cout << "EXIT:" << exitSum << std::endl;
+	//printf("%f\n", exitSum);
 
 /*
 	//собираем во всех процессах TAU*MATRIX*Xn
@@ -98,13 +103,17 @@ bool exitFunction(SlayData* data, ScattervParam* vecParam, const double exitCons
 				data.lineBuffer, vecParam.size, vecParam.offset, 
 				MPI_DOUBLE, MPI_COMM_WORLD);
 */
+	
 	if(exitSum < exitConstant){
 		++precisionCounter;
 	} else {
-		precisionCounter = 0;
+		++precisionCounter;
+		//precisionCounter = 0;
 	}
 
-	return precisionCounter >= PRECISION;
+	//printf("%d\n", precisionCounter);
+	return precisionCounter < PRECISION;
+	//return false;
 }
 
 int main(int argc, char** argv){
@@ -134,7 +143,7 @@ int main(int argc, char** argv){
 	localData.lineAnswer = (double*) malloc(sizeof(double)*vecParam.size[rank]);
 	//printf("%p\n%p\n%p\n%p\n", mat, lineCurr, lineBuffer, lineAnswer);
 
-	initZeroArr(localData.lineAnswer, vecParam.size[rank]);
+	initZeroArr(localData.lineCurr, DIMENSION);
 	if(rank == 0){
 		matrixBuff = (double*) malloc(sizeof(double)*(DIMENSION*DIMENSION));
 		answerBuff = (double*) malloc(sizeof(double)*(DIMENSION));
@@ -154,16 +163,30 @@ int main(int argc, char** argv){
 	multScalArr(localData.matrix, TAU, matParam.size[rank]);
 	multScalArr(localData.lineAnswer, TAU, vecParam.size[rank]);
 
+	int interationCounter = 0;
+
 	//помимо определения момента выхода из цикла exitFunction 
 	//подсчитывает локальный A*Xn и складывает результать в data.lineBuffer
 	while(exitFunction(&localData, &vecParam, exitConstant, rank)){
 		for(int i = 0; i < vecParam.size[rank]; ++i){ // этот цикл определяет локальный Xn - T*A*Xn + T*B
-			localData.lineCurr[i] = localData.lineCurr[i] - localData.lineBuffer[i] + localData.lineAnswer[i]; 
+			localData.lineBuffer[i] = localData.lineCurr[i] - localData.lineBuffer[i] + localData.lineAnswer[i]; 
 		}
-
-		MPI_Allgatherv(localData.lineCurr, vecParam.size[rank], MPI_DOUBLE,
+		MPI_Barrier(MPI_COMM_WORLD);
+		
+		//printf("%d ", rank);
+		
+		//printLine(localData.lineCurr, vecParam.size[rank]);
+		MPI_Allgatherv(localData.lineBuffer, vecParam.size[rank], MPI_DOUBLE,
 				localData.lineCurr, vecParam.size, vecParam.offset, 
 				MPI_DOUBLE, MPI_COMM_WORLD);
+
+		//printLine(localData.lineCurr, DIMENSION);
+
+		++interationCounter;
+		if(interationCounter >= MAXITERATION){
+			printf("No converge for %d iteration!\n", interationCounter);
+			return 0;
+		}
 	}
 
 	if(rank == 0){
