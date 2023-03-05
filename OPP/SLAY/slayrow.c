@@ -5,9 +5,9 @@
 #include "matrixio.h"
 
 #define MAXITERATION 10000
-#define DIMENSION 6500
-#define TAU 0.01
-#define EPSILON 0.000005
+#define DIMENSION 600
+#define TAU -0.01
+#define EPSILON 0.00005
 
 typedef struct SlayData {
 	double* lineCurr;
@@ -72,6 +72,7 @@ double measure(const double* line) {
 bool conditionExit(const SlayData* data) {
 	prodMatLine(data->matrix, data->lineCurr, data->lineNext);
 	minusLineLine1(data->lineNext, data->lineAnswer);
+	printf("%f\n", (measure(data->lineNext) / measure(data->lineAnswer)));
 	return (measure(data->lineNext) / measure(data->lineAnswer)) >= EPSILON;
 }
 
