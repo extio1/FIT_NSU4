@@ -78,8 +78,8 @@ int main() {
 	double* lineNext = (double*)malloc(sizeof(double) * DIMENSION);
 	double* lineAnswer = (double*)malloc(sizeof(double) * DIMENSION);
 
-	entryMatrix(mat, DIMENSION, "coefMatrix.txt");
-	entryLine(lineAnswer, DIMENSION, "lineAnswer.txt");
+	entryMatrix(mat, DIMENSION, "workingexsmpl/coefMatrix.txt");
+	entryLine(lineAnswer, DIMENSION, "workingexsmpl/lineAnswer.txt");
 
 	SlayData data = { lineCurr, lineNext, lineAnswer, mat };
 	struct timespec start, end;
@@ -102,7 +102,7 @@ int main() {
 	printf("%d iterations to convergence.\n", iterationCounter);
 	printf("Time spent: %f\n", end.tv_sec - start.tv_sec + 0.000000001 * (end.tv_nsec - start.tv_nsec));
 
-	writeBinary(data.lineCurr, DIMENSION);
+	//writeBinary(data.lineCurr, DIMENSION);
 	free(mat);
 	free(lineAnswer);
 	free(lineCurr);
