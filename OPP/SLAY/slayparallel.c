@@ -7,7 +7,7 @@
 #define MAXITERATION 100000
 #define TAU -0.01
 #define EPSILON 0.00005
-#define DIMENSION 600
+#define DIMENSION 800
 #define PRECISION 5
 
 typedef struct SlayData {
@@ -99,7 +99,7 @@ bool exitFunction(SlayData* data, ScattervParam* vecParam, const double exitCons
 	} else {
 		precisionCounter = 0;
 	}
-	printf("%d %f\n", precisionCounter, exitSum);
+	
 	return precisionCounter < PRECISION;
 }
 
@@ -109,9 +109,10 @@ void printTimeProcesses(double timeStart, double timeEnd, int rank){
 
 	MPI_Reduce(&localTime, &globalTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	
-	printf("Process #%d works for %f sec.\n", rank, localTime);
+	//printf("Process #%d works for %f sec.\n", rank, localTime);
 	if(rank == 0){
-		printf("---------------------------\nTotal program calculating time: %f", globalTime);
+		printf("---------------------------\nTotal program calculating time: %f\n---------------------------\n", 
+			globalTime);
 	}
 }
 
@@ -190,9 +191,9 @@ int main(int argc, char** argv){
 	if(rank == 0){
 		free(matrixBuff);
 		free(answerBuff);
-
-		printf("%d iterations to convergence.", iterationCounter);
-		writeBinary(localData.lineCurr, DIMENSION);
+		//printLine(localData.lineCurr, DIMENSION);
+		printf("%d iterations to convergence.\n", iterationCounter);
+		//writeBinary(localData.lineCurr, DIMENSION);
 	}
 
 	free(localData.matrix);
