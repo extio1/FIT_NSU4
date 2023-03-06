@@ -99,7 +99,7 @@ bool exitFunction(SlayData* data, ScattervParam* vecParam, const double exitCons
 	} else {
 		precisionCounter = 0;
 	}
-	
+
 	return precisionCounter < PRECISION;
 }
 
@@ -137,8 +137,8 @@ int main(int argc, char** argv){
 	if(rank == 0){
 		matrixBuff = (double*) malloc(sizeof(double)*(DIMENSION*DIMENSION));
 		answerBuff = (double*) malloc(sizeof(double)*(DIMENSION));
-		entryMatrix(matrixBuff, DIMENSION, "coefMatrix.txt");
-		entryLine(answerBuff, DIMENSION, "lineAnswer.txt");
+		entryMatrix(matrixBuff, DIMENSION, "workingexsmpl/coefMatrix.txt");
+		entryLine(answerBuff, DIMENSION, "workingexsmpl/lineAnswer.txt");
 	}
 
 	timeStart = MPI_Wtime();
@@ -191,7 +191,7 @@ int main(int argc, char** argv){
 	if(rank == 0){
 		free(matrixBuff);
 		free(answerBuff);
-		//printLine(localData.lineCurr, DIMENSION);
+		printLine(localData.lineCurr, DIMENSION);
 		printf("%d iterations to convergence.\n", iterationCounter);
 		//writeBinary(localData.lineCurr, DIMENSION);
 	}
