@@ -23,7 +23,7 @@ int main(){
 		for(int j = 0; j < nx*ny; ++j){
 			if(i == j){
 				fprintf(coefMatrixF, "%f ", -4.0);
-			}else if ( ((i-j==1) || (j-i==1))){
+			}else if ( ((i-j==1) || (j-i==1)) && !((i%nx==nx-1&&j%nx==0)||(j%nx==nx-1&&i%nx==0)) ) {
 				fprintf(coefMatrixF, "%f ", 1.0);
 			}else if((i-j == nx) || (j-i == nx)){
 				fprintf(coefMatrixF, "%f ", 1.0);
@@ -33,7 +33,14 @@ int main(){
 			}
 		}
 		fputs("\n", coefMatrixF);
-		fprintf(xLineF, "%f ", (double)( (rand()%10 == 0)*((double)rand()/rand())*(rand()%2*(-1))) );
+		if(rand()%20 == 0){
+			printf("NOT ZERO\n");
+			fprintf(xLineF, "%f ", (double)(rand())/RAND_MAX*100 - 50 );
+		}
+		else{
+			fprintf(xLineF, "%f ", 0.0);
+		}
+		
 	}
 	printf("==========================>DONE!\n");
 
