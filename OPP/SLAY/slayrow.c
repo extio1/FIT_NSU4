@@ -4,8 +4,8 @@
 #include <time.h>
 #include "matrixio.h"
 
-#define MAXITERATION 10000
-#define DIMENSION 600
+#define MAXITERATION 100000
+#define DIMENSION 800
 #define TAU -0.01
 #define EPSILON 0.00005
 
@@ -16,11 +16,6 @@ typedef struct SlayData {
 	double* matrix;
 } SlayData;
 
-void swapPointers(double** p1, double** p2) {
-	double* temp = *p1;
-	*p1 = *p2;
-	*p2 = temp;
-}
 
 void prodMatLine(const double* mat, const double* oldLine, double* newLine) {
 	for (int i = 0; i < DIMENSION; ++i) {
@@ -57,7 +52,6 @@ void step(SlayData* data) {
 	minusLineLine1(data->lineNext, data->lineAnswer);
 	prodScalLine(TAU, data->lineNext);
     minusLineLine1(data->lineCurr, data->lineNext);
-	//swapPointers(&(data->lineCurr), &(data->lineNext));
 }
 
 double measure(const double* line) {
@@ -72,7 +66,7 @@ double measure(const double* line) {
 bool conditionExit(const SlayData* data) {
 	prodMatLine(data->matrix, data->lineCurr, data->lineNext);
 	minusLineLine1(data->lineNext, data->lineAnswer);
-	printf("%f\n", (measure(data->lineNext) / measure(data->lineAnswer)));
+	printf("%f %f\n%f\n", measure(data->lineNext), measure(data->lineAnswer), (measure(data->lineNext) / measure(data->lineAnswer)));
 	return (measure(data->lineNext) / measure(data->lineAnswer)) >= EPSILON;
 }
 
@@ -88,7 +82,6 @@ int main() {
 	entryLine(lineAnswer, DIMENSION, "lineAnswer.txt");
 
 	SlayData data = { lineCurr, lineNext, lineAnswer, mat };
-	
 	struct timespec start, end;
 	if( clock_gettime(CLOCK_MONOTONIC_RAW, &start) != 0 ) printf("Error of getting time.\n");
 
@@ -109,6 +102,7 @@ int main() {
 	printf("%d iterations to convergence.\n", iterationCounter);
 	printf("Time spent: %f\n", end.tv_sec - start.tv_sec + 0.000000001 * (end.tv_nsec - start.tv_nsec));
 
+	writeBinary(data.lineCurr, DIMENSION);
 	free(mat);
 	free(lineAnswer);
 	free(lineCurr);
