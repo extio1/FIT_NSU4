@@ -12,7 +12,7 @@ void entryMatrix(double* mat, const int dimension, const char* filePath) {
 		int k = 0;
 		int begin = 0;
 		int length = 0;
-		for (int j = 0; j < dimension; j++) {
+		for (int j = 0; j < strmat.size(); j++) {
 			if (strmat[j] == ' ' || j == strmat.size() - 1) {
 				mat[i * dimension + k] = atof((strmat.substr(begin, length)).c_str());
 				begin = j + 1;
@@ -33,7 +33,7 @@ void entryLine(double* line, const int dimension, const char* filePath) {
 	int k = 0;
 	int begin = 0;
 	int length = 0;
-	for (int j = 0; j < dimension; j++) {
+	for (int j = 0; j < strmat.size(); j++) {
 		if (strmat[j] == ' ' || j == strmat.size() - 1) {
 			line[k] = atof((strmat.substr(begin, length)).c_str());
 			begin = j + 1;
