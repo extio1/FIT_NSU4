@@ -7,13 +7,13 @@
 #define MAXITERATION 100000
 #define TAU -0.01
 #define EPSILON 0.00005
-#define DIMENSION 800
+#define DIMENSION 1500
 #define PRECISION 5
 
 typedef struct SlayData {
 	double* lineCurr;
 	double* lineBuffer;
-	double* lineAnswer;
+	double* lineB;
 	double* matrix;
 } SlayData;
 
@@ -41,8 +41,8 @@ int defineSegmentSize(const int nProc){
 	}
 }
 
-//опеределяет параметры для MPI_Scatterv
-void defineScatter(ScattervParam* paramVec, ScattervParam* paramMat, const int nproc){
+//опеределяет параметры для MPI_Scatterv и подобных функций
+void defineSendingParams(ScattervParam* paramVec, ScattervParam* paramMat, const int nproc){
 	int prevSegmentSizeVec = defineSegmentSize(nproc);
 	int prevSegmentSizeMat = prevSegmentSizeVec * DIMENSION;
 	paramVec->size[0] = prevSegmentSizeVec;
@@ -65,16 +65,16 @@ void initZeroArr(double* arr, const int length){
 	}
 }
 
-double answerMeasureSquaredCalc(const double* localAnswer, const int lenght){
-	double localMeasureAnswer=0;
+double bMeasureSquaredCalc(const double* localB, const int lenght){
+	double localMeasureB=0;
 	for(int i = 0; i < lenght; i++){
-		double temp = localAnswer[i];
-		localMeasureAnswer += temp*temp;
+		double temp = localB[i];
+		localMeasureB += temp*temp;
 	}
 
-	double answerMeasure;
-	MPI_Allreduce(&localMeasureAnswer, &answerMeasure, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-	return answerMeasure;
+	double bMeasure;
+	MPI_Allreduce(&localMeasureB, &bMeasure, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	return bMeasure;
 }
 
 bool exitFunction(SlayData* data, ScattervParam* vecParam, const double exitConstant, const int rank){
@@ -87,13 +87,14 @@ bool exitFunction(SlayData* data, ScattervParam* vecParam, const double exitCons
 			data->lineBuffer[i] += data->lineCurr[j] * data->matrix[i * DIMENSION + j]; 
 		}
 		
-		double localExitSumt = data->lineBuffer[i] - data->lineAnswer[i];
+		double localExitSumt = data->lineBuffer[i] - data->lineB[i];
 		localExitSum += localExitSumt * localExitSumt;
 	}
 
 	double exitSum = 0;
+
 	MPI_Allreduce(&localExitSum, &exitSum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-	
+
 	if(exitSum < exitConstant){
 		++precisionCounter;
 	} else {
@@ -109,7 +110,8 @@ void printTimeProcesses(double timeStart, double timeEnd, int rank){
 
 	MPI_Reduce(&localTime, &globalTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	
-	//printf("Process #%d works for %f sec.\n", rank, localTime);
+	printf("Process #%d works for %f sec.\n", rank, localTime);
+	MPI_Barrier(MPI_COMM_WORLD);
 	if(rank == 0){
 		printf("---------------------------\nTotal program calculating time: %f\n---------------------------\n", 
 			globalTime);
@@ -132,46 +134,45 @@ int main(int argc, char** argv){
 	ScattervParam vecParam = {size2, offset2};
 
 	double* matrixBuff;
-	double* answerBuff;
+	double* bBuff;
 	
 	if(rank == 0){
 		matrixBuff = (double*) malloc(sizeof(double)*(DIMENSION*DIMENSION));
-		answerBuff = (double*) malloc(sizeof(double)*(DIMENSION));
-		entryMatrix(matrixBuff, DIMENSION, "workingexsmpl/coefMatrix.txt");
-		entryLine(answerBuff, DIMENSION, "workingexsmpl/lineAnswer.txt");
+		bBuff = (double*) malloc(sizeof(double)*(DIMENSION));
+		entryMatrix(matrixBuff, DIMENSION, "coefMatrix.txt");
+		entryLine(bBuff, DIMENSION, "lineAnswer.txt");
 	}
 
 	timeStart = MPI_Wtime();
 
-	defineScatter(&vecParam, &matParam, size);
+	defineSendingParams(&vecParam, &matParam, size);
 
 	SlayData localData;
 	localData.matrix = (double*) malloc(sizeof(double)*matParam.size[rank]);
 	localData.lineCurr = (double*) malloc(sizeof(double)*DIMENSION);
 	localData.lineBuffer = (double*) malloc(sizeof(double)*DIMENSION);
-	localData.lineAnswer = (double*) malloc(sizeof(double)*vecParam.size[rank]);
+	localData.lineB = (double*) malloc(sizeof(double)*vecParam.size[rank]);
 
 	initZeroArr(localData.lineCurr, DIMENSION);
 
 	MPI_Scatterv(matrixBuff, matParam.size, matParam.offset, MPI_DOUBLE, 
 				localData.matrix, matParam.size[rank], MPI_DOUBLE, 
 				0, MPI_COMM_WORLD);
-	MPI_Scatterv(answerBuff, vecParam.size, vecParam.offset, MPI_DOUBLE,
-				localData.lineAnswer, vecParam.size[rank], MPI_DOUBLE,
+	MPI_Scatterv(bBuff, vecParam.size, vecParam.offset, MPI_DOUBLE,
+				localData.lineB, vecParam.size[rank], MPI_DOUBLE,
 				0, MPI_COMM_WORLD);
 
-	double answerMeasureSquared = answerMeasureSquaredCalc(localData.lineAnswer, vecParam.size[rank]);
-	double exitConstant = TAU*TAU*EPSILON*EPSILON*answerMeasureSquared;
+	double bMeasureSquared = bMeasureSquaredCalc(localData.lineB, vecParam.size[rank]);
+	double exitConstant = TAU*TAU*EPSILON*EPSILON*bMeasureSquared;
 	multScalArr(localData.matrix, TAU, matParam.size[rank]);
-	multScalArr(localData.lineAnswer, TAU, vecParam.size[rank]);
+	multScalArr(localData.lineB, TAU, vecParam.size[rank]);
 
 	int iterationCounter = 0;
-
 	//помимо определения момента выхода из цикла exitFunction 
 	//подсчитывает локальный A*Xn и складывает результать в data.lineBuffer
 	while(exitFunction(&localData, &vecParam, exitConstant, rank)){
 		for(int i = 0; i < vecParam.size[rank]; ++i){ // этот цикл определяет локальный Xn - T*A*Xn + T*B
-			localData.lineBuffer[i] = localData.lineCurr[i+vecParam.offset[rank]] - localData.lineBuffer[i] + localData.lineAnswer[i]; 
+			localData.lineBuffer[i] = localData.lineCurr[i+vecParam.offset[rank]] - localData.lineBuffer[i] + localData.lineB[i]; 
 		}
 
 		MPI_Allgatherv(localData.lineBuffer, vecParam.size[rank], MPI_DOUBLE,
@@ -181,23 +182,26 @@ int main(int argc, char** argv){
 		++iterationCounter;
 		if(iterationCounter >= MAXITERATION){
 			printf("No converge for %d iteration!\n", iterationCounter);
-			return 0;
+			goto clear;
 		}
 	}
 
 	timeEnd = MPI_Wtime();
+
 	printTimeProcesses(timeStart, timeEnd, rank);
-	MPI_Barrier(MPI_COMM_WORLD);
+
+	if(rank == 0){
+		printf("%d iterations to convergence.\n", iterationCounter);
+	}
+
+	clear:
 	if(rank == 0){
 		free(matrixBuff);
-		free(answerBuff);
-		printLine(localData.lineCurr, DIMENSION);
-		printf("%d iterations to convergence.\n", iterationCounter);
-		//writeBinary(localData.lineCurr, DIMENSION);
+		free(bBuff);
 	}
 
 	free(localData.matrix);
-	free(localData.lineAnswer);
+	free(localData.lineB);
 	free(localData.lineCurr);
 	free(localData.lineBuffer);
 
