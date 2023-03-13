@@ -60,15 +60,14 @@ int reverseRegularFile(struct reverse_data_paths* data, char* fileName){
 
 	char* inPath = concatPaths(data->path, fileName, data->pathLen, nameLen);
 	if( (fileIn = fopen(inPath, "rb")) == NULL){
-		//printf("File %s have not opened.\n", inPath);
-		printf("==========%s %d\n", fileName, nameLen);
+		printf("File %s have not opened.\n", inPath);
 		return -1;
 	}
 
 	reverseName(fileName, nameLen);
 	char* outPath = concatPaths(data->reversedPath, fileName, data->pathLen, nameLen);
 	if( (fileOut = fopen(outPath, "wb")) == NULL){
-		//printf("File %s have not opened.\n", outPath);
+		printf("File %s have not opened.\n", outPath);
 		return -1;
 	}
 	
