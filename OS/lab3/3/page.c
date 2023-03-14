@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <stdint.h>
 
+#define GET_BIT(X,Y) (X & ((uint64_t)1 << Y)) >> Y
+
 void show_maps(char** argv){
 	char path_buff[260];
 
@@ -27,30 +29,28 @@ void show_maps(char** argv){
 	fclose(f);
 }
 
-void read_procmap(const char* path, unsigned int vaddr){
+void read_procmap(const char* path, unsigned long long vaddr){
 	FILE* f = fopen(path, "rb");
-
-	unsigned long offset = vaddr / getpagesize() * 8;
+	uint64_t offset = vaddr / getpagesize() * 8;
 
    	if( fseek(f, offset, SEEK_SET) == -1 ){
       perror("Error while fseek() in /proc/PID/pagemap.\n");
       return;
    	}	
 
-	uint64_t pageinfo = 0;
+	uint64_t pageinfo = 123;
    	fread(&pageinfo, 8, 1, f);
 
-   	printf("\n----------------------------------------------------\nYes - 1, No - 0\n");
-   	printf("The page is present in RAM: %ld\n", pageinfo&64);
-   	printf("The page is in swap space: %ld\n", pageinfo&63);
-   	printf("The page is a file-mapped page or a shared anonymous page.: %ld\n", pageinfo&61);
+	//printf("=====%ld\n", pageinfo);
+   	printf("Result: %llx\n", (unsigned long long) pageinfo);
+   	printf("----------------------------------------------------\nYes - 1, No - 0\n");
+   	printf("The page is present in RAM: %ld\n", GET_BIT(pageinfo,64));
+   	printf("The page is in swap space: %ld\n", GET_BIT(pageinfo,63));
+   	printf("The page is a file-mapped page or a shared anonymous page.: %ld\n", GET_BIT(pageinfo,61));
    	//printf("------------------------------------------------------");
-   	printf("The page is exclusively mapped: %ld\n", pageinfo&56);
-   	printf("PTE is soft-dirty: %ld\n", pageinfo&55);
-   /*	if(pageinfo&64)
-   		printf("")
-*/
-   //	(X & ((uint64_t)1<<Y)) >> Y
+   	printf("The page is exclusively mapped: %ld\n", GET_BIT(pageinfo,56));
+   	printf("PTE is soft-dirty: %ld\n", GET_BIT(pageinfo,55));
+
 	fclose(f);
 }
 
@@ -65,14 +65,14 @@ int main(int argc, char** argv){
 	char buffer[512];
 	printf("Which address you'd like to examine?: 0x");
 	scanf("%s", &buffer);
-	unsigned long virt_addr = strtol(buffer, NULL, 16);
+	unsigned long long virt_addr = strtol(buffer, NULL, 16);
 
 
 	char path_buff[260];
 	if(strcmp(argv[1], "self") == 0){
-		memcpy(path_buff, "/proc/self/maps", 18);
+		memcpy(path_buff, "/proc/self/pagemap\0", 19);
 	} else {
-		sprintf(path_buff, "/proc/%d/maps", atoi(argv[1]));
+		sprintf(path_buff, "/proc/%d/pagemap", atoi(argv[1]));
 	}
 
 	read_procmap(path_buff, virt_addr);
