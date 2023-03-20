@@ -1,0 +1,88 @@
+package tetrisModel;
+
+import view.observation.Observer;
+import view.observation.Subject;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Tetris extends Thread implements Subject {
+    private final int FIELD_SIZE_X = 10;
+    private final int FIELD_SIZE_Y = 20;
+
+    private volatile boolean gameRunning = false;
+
+    private int figureCounter = 0;
+    private final List<Observer> observers = new ArrayList<>();
+    private final int[] gameField = new int[FIELD_SIZE_X * FIELD_SIZE_Y];
+
+    @Override
+    public void run(){
+        turnOn();
+        resumeGameSession();
+    }
+
+    public void turnOn(){
+        gameRunning = true;
+    }
+    public void turnOff(){
+        gameRunning = false;
+    }
+
+    private void resumeGameSession() {
+        while(!Thread.interrupted() && gameRunning){
+            System.out.println("GO DOWN");
+            System.out.println(Thread.currentThread());
+            try {
+                sleep(1000);
+            } catch (InterruptedException e){
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+
+    public void left(){
+        if(gameRunning) {
+            this.interrupt();
+            System.out.println("DO LEFT");
+            System.out.println(Thread.currentThread());
+        }
+    }
+
+    public void right(){
+        if(gameRunning) {
+            this.interrupt();
+            System.out.println("DO RIGHT");
+            System.out.println(Thread.currentThread());
+        }
+    }
+
+    public void exit() {
+        if(gameRunning) {
+            this.interrupt();
+            System.out.println("EXIT");
+            System.out.println(Thread.currentThread());
+            gameRunning = false;
+        }
+    }
+
+    @Override
+    public void attach(Observer obs) {
+        observers.add(obs);
+    }
+
+    @Override
+    public void detach(Observer obs) {
+        observers.remove(obs);
+    }
+
+    @Override
+    public void signalyzeAll() {
+        observers.forEach(Observer::update);
+    }
+
+    @Override
+    public Object getInfo() {
+        return null;
+    }
+}
