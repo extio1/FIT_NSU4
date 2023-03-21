@@ -5,9 +5,9 @@
 #include <iostream>
 
 #define MAXITERATION 100000
-#define TAU 0.01
+#define TAU -0.01
 #define EPSILON 0.00005
-#define DIMENSION 5
+#define DIMENSION 1200
 #define PRECISION 5
 
 typedef struct SlayData {
@@ -41,20 +41,23 @@ int main(int argc, char** argv){
 	entryMatrix(data.matrix, DIMENSION, "coefMatrix.txt");
 	entryLine(data.lineB, DIMENSION, "vecB.txt");
 
+	#pragma omp parallel shared(data, bMeasureSquared, exitConstant, convergeFlag, iterationCounter, timeEnd, timeStart)
+	{
+	#pragma omp reduction(min:timeEnd)
 	timeStart = omp_get_wtime();
 
-	#pragma omp parallel shared(data, bMeasureSquared, exitConstant, convergeFlag, iterationCounter)
-	{
 	initZeroArr(data.lineCurr);
 
 	bMeasureSquaredCalc();
+
 	#pragma omp single
 	exitConstant = TAU*TAU*EPSILON*EPSILON*bMeasureSquared;
+
 	multScalLine(data.lineB, TAU);
 	multScalMatrix(data.matrix, TAU);
 
 	while(exitFunction()){
-		#pragma omp for
+		#pragma omp for schedule(guided, 100)
 		for(int i = 0; i < DIMENSION; ++i){
 			data.lineCurr[i] = data.lineCurr[i] - data.lineBuffer[i] + data.lineB[i]; 
 		}
@@ -72,15 +75,16 @@ int main(int argc, char** argv){
 			break;
 		}
 	}
-
+	#pragma omp reduction(max:timeEnd)
+	timeEnd = omp_get_wtime();
 	}
 
-	timeEnd = omp_get_wtime();
-
+	
 	if(convergeFlag){
 		printf("%d iterations to convergence.\n", iterationCounter);
 	}
-	printf("Work took %f seconds\n", timeEnd - timeStart);
+
+	printf("Execution %f seconds\n", timeEnd - timeStart);
 
 	free(matrix);
 	free(b);
@@ -89,7 +93,7 @@ int main(int argc, char** argv){
 }
 
 void bMeasureSquaredCalc(){
-	#pragma omp for reduction(+:bMeasureSquared)
+	#pragma omp for reduction(+:bMeasureSquared) schedule(guided, 10)
 	for(int i = 0; i < DIMENSION; i++){
 		double temp = data.lineB[i];
 		bMeasureSquared += temp*temp;
