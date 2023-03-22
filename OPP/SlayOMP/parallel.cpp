@@ -3,11 +3,13 @@
 #include <omp.h>
 #include "matrixio.h"
 #include <iostream>
+#include <string>
+#include <unistd.h>
 
 #define MAXITERATION 100000
 #define TAU -0.01
 #define EPSILON 0.00005
-#define DIMENSION 1200
+#define DIMENSION 1500
 #define PRECISION 5
 
 typedef struct SlayData {
@@ -17,38 +19,41 @@ typedef struct SlayData {
 	double* matrix;
 } SlayData;
 
-bool convergeFlag = true;
-int iterationCounter = 0;
-double bMeasureSquared = 0;
-double exitConstant = 0;
-double exitSum = 0;
+double timeAll = 0;
 int precisionCounter = 0;
+double exitSum = 0;
+double buffer = 0;
 double* matrix = (double*) malloc(sizeof(double)*(DIMENSION*DIMENSION));
 double* lineCurr = (double*) malloc(sizeof(double)*(DIMENSION));
 double* lineBuff = (double*) malloc(sizeof(double)*(DIMENSION));
 double* b = (double*) malloc(sizeof(double)*(DIMENSION));
 SlayData data = {lineCurr, lineBuff, b, matrix};
 
-void bMeasureSquaredCalc();
+double bMeasureSquaredCalc();
 void initZeroArr(double* arr);
 void multScalLine(double* arr, const double scal);
 void multScalMatrix(double* arr, const double scal);
-bool exitFunction();
+bool exitFunction(const double);
 
 int main(int argc, char** argv){
-	double timeStart, timeEnd;
+	double timeStart = 0, timeEnd = 0;
+
+	bool convergeFlag = true;
+	int iterationCounter = 0;
+	double bMeasureSquared = 0;
+	double exitConstant = 0;
 
 	entryMatrix(data.matrix, DIMENSION, "coefMatrix.txt");
 	entryLine(data.lineB, DIMENSION, "vecB.txt");
 
-	#pragma omp parallel shared(data, bMeasureSquared, exitConstant, convergeFlag, iterationCounter, timeEnd, timeStart)
+	#pragma omp parallel shared(data, exitConstant, exitSum, convergeFlag, iterationCounter, timeEnd, timeStart, bMeasureSquared, buffer)
 	{
-	#pragma omp reduction(min:timeEnd)
-	timeStart = omp_get_wtime();
+	#pragma omp atomic
+	timeStart += omp_get_wtime();
 
 	initZeroArr(data.lineCurr);
 
-	bMeasureSquaredCalc();
+	double bMeasureSquared = bMeasureSquaredCalc();
 
 	#pragma omp single
 	exitConstant = TAU*TAU*EPSILON*EPSILON*bMeasureSquared;
@@ -56,8 +61,8 @@ int main(int argc, char** argv){
 	multScalLine(data.lineB, TAU);
 	multScalMatrix(data.matrix, TAU);
 
-	while(exitFunction()){
-		#pragma omp for schedule(guided, 100)
+	while(exitFunction(exitConstant)){
+		#pragma omp for schedule(guided, 200)
 		for(int i = 0; i < DIMENSION; ++i){
 			data.lineCurr[i] = data.lineCurr[i] - data.lineBuffer[i] + data.lineB[i]; 
 		}
@@ -75,16 +80,24 @@ int main(int argc, char** argv){
 			break;
 		}
 	}
-	#pragma omp reduction(max:timeEnd)
-	timeEnd = omp_get_wtime();
+	#pragma omp atomic
+	timeEnd += omp_get_wtime();
+	#pragma omp barrier
+	#pragma omp single
+	timeAll = (timeEnd - timeStart) / (double) omp_get_num_threads();
 	}
 
 	
 	if(convergeFlag){
 		printf("%d iterations to convergence.\n", iterationCounter);
+		printf("Execution %f seconds\n", timeAll);
+		printf("--------------\n");
+		FILE* f = fopen("filetime.txt", "w");
+		fprintf(f, "%f\n", timeAll);
+		fclose(f);
 	}
 
-	printf("Execution %f seconds\n", timeEnd - timeStart);
+
 
 	free(matrix);
 	free(b);
@@ -92,12 +105,13 @@ int main(int argc, char** argv){
 	return 0;
 }
 
-void bMeasureSquaredCalc(){
-	#pragma omp for reduction(+:bMeasureSquared) schedule(guided, 10)
+double bMeasureSquaredCalc(){
+	#pragma omp for reduction(+:buffer) schedule(guided, 10)
 	for(int i = 0; i < DIMENSION; i++){
 		double temp = data.lineB[i];
-		bMeasureSquared += temp*temp;
+		buffer += temp*temp;
 	}
+	return buffer;
 }
 
 void initZeroArr(double* arr){
@@ -121,13 +135,13 @@ void multScalMatrix(double* arr, const double scal){
 			arr[i * DIMENSION + j] *= scal;
 		}
 	}
-
 }
 
-bool exitFunction(){
+bool exitFunction(const double exitConstant){
+	#pragma omp single
 	exitSum = 0;
 
-	#pragma omp for reduction(+ : exitSum)
+	#pragma omp for reduction(+ : exitSum) schedule(guided, 200)
 	for(int i = 0; i < DIMENSION; ++i){
 		data.lineBuffer[i] = 0;
 		for(int j = 0; j < DIMENSION; ++j){
@@ -138,12 +152,14 @@ bool exitFunction(){
 		exitSum += exitSumt * exitSumt;
 	}
 
+	//std::cout << exitSum << ' ' << exitConstant << '\n';
 	#pragma omp single
 	if(exitSum < exitConstant){
 		++precisionCounter;
 	} else {
 		precisionCounter = 0;
 	}
+	#pragma omp barrier
 
 	return precisionCounter < PRECISION;
 }
