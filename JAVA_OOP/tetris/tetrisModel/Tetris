@@ -1,68 +1,131 @@
 package tetrisModel;
 
+import controller.CommandTetris;
 import view.observation.Observer;
 import view.observation.Subject;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
-public class Tetris extends Thread implements Subject {
+public class Tetris implements Subject, Runnable {
+    private volatile Queue<CommandTetris> commandQ = new LinkedList<>();
+
     private final int FIELD_SIZE_X = 10;
     private final int FIELD_SIZE_Y = 20;
 
     private volatile boolean gameRunning = false;
 
     private int figureCounter = 0;
+    private int figureSpeed = 1000; //sleep in ms
     private final List<Observer> observers = new ArrayList<>();
-    private final int[] gameField = new int[FIELD_SIZE_X * FIELD_SIZE_Y];
 
-    @Override
-    public void run(){
-        turnOn();
-        resumeGameSession();
+    Thread gameFieldThread;
+    private final int[] gameField = new int[FIELD_SIZE_X * FIELD_SIZE_Y];
+    // should do two data: outer and for observers
+
+    public Tetris(){
+        gameFieldThread = new Thread(this, "GameField");
     }
 
     public void turnOn(){
         gameRunning = true;
+        gameFieldThread.start();
     }
     public void turnOff(){
         gameRunning = false;
     }
 
+    public void addMovement(CommandTetris comm){
+        commandQ.add(comm);
+    }
+
+    @Override
+    public void run(){
+        resumeGameSession();
+    }
+
     private void resumeGameSession() {
-        while(!Thread.interrupted() && gameRunning){
-            System.out.println("GO DOWN");
-            System.out.println(Thread.currentThread());
-            try {
-                sleep(1000);
-            } catch (InterruptedException e){
-                System.out.println(e.getMessage());
+        while(!Thread.interrupted() ) {
+            if (commandQ.isEmpty()){
+                System.out.println("GO DOWN");
+            } else {
+                if(gameRunning) {
+                    switch (commandQ.remove()) {
+                        case Left -> left();
+                        case Right -> right();
+                        case Up -> up();
+                        case Down -> down();
+                    }
+                }
             }
-        }
-    }
-
-    public void left(){
-        if(gameRunning) {
-            this.interrupt();
-            System.out.println("DO LEFT");
-            System.out.println(Thread.currentThread());
-        }
-    }
-
-    public void right(){
-        if(gameRunning) {
-            this.interrupt();
-            System.out.println("DO RIGHT");
-            System.out.println(Thread.currentThread());
+            try {
+                Thread.sleep(figureSpeed);
+            } catch (InterruptedException e) {
+                System.out.println(e.getMessage());
+                break;
+            }
         }
     }
 
     public void exit() {
         if(gameRunning) {
-            this.interrupt();
-            System.out.println("EXIT");
-            System.out.println(Thread.currentThread());
+            gameFieldThread.interrupt();
+            System.out.println("Exit!");
             gameRunning = false;
+        }
+    }
+    public void highScores() {
+        if(gameRunning) {
+            gameFieldThread.interrupt();
+            System.out.println("about");
+        }
+    }
+    public void about() {
+        if(gameRunning) {
+            gameFieldThread.interrupt();
+            System.out.println("about");
+        }
+    }
+    public void newGame() {
+        if(gameRunning) {
+            gameFieldThread.interrupt();
+            System.out.println("about");
+        }
+    }
+    public void menu() {
+        if(gameRunning) {
+            gameFieldThread.interrupt();
+            System.out.println("menu");
+        }
+    }
+
+    private void left(){
+        if(gameRunning) {
+            System.out.println("DO LEFT");
+        }
+    }
+
+    private void right(){
+        if(gameRunning) {
+            System.out.println("DO RIGHT");
+        }
+    }
+
+    private void up(){
+        if(gameRunning) {
+            System.out.println("DO UP");
+        }
+    }
+
+    private void down(){
+        if(gameRunning) {
+            System.out.println("DO DOWN");
+        }
+    }
+
+    private static class figureFall extends TimerTask {
+        @Override
+        public void run() {
+            System.out.println("Figure falls down");
         }
     }
 
@@ -83,6 +146,6 @@ public class Tetris extends Thread implements Subject {
 
     @Override
     public Object getInfo() {
-        return null;
+        return gameField;
     }
 }
