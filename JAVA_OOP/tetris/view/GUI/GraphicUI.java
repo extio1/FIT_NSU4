@@ -1,7 +1,8 @@
-package view.GUI;
+package view.gui;
 
 import controller.CommandTetris;
 import controller.Controller;
+import tetrisModel.Package;
 import view.observation.*;
 
 import javax.swing.*;
@@ -10,13 +11,13 @@ import java.awt.event.*;
 
 public class GraphicUI implements Observer {
     private final Controller controller;
-    private final Subject TetrisModel;
+    private final Subject model;
 
     private JFrame mainFrame;
-    private JFrame menuFrame;
+    private MainWindow mainWindow;
+    private GameFieldWindow gameFieldWindow;
 
     private volatile boolean flagDataChanges = false;
-    private int[] gameField;
 
     Thread updater = new Thread(new Runnable() {
         @Override
@@ -24,6 +25,7 @@ public class GraphicUI implements Observer {
             while(!Thread.interrupted()){
                 if(flagDataChanges){
                     System.out.println("Data updated, asking for model");
+                    changeImage();
                     flagDataChanges = false;
                 }
             }
@@ -32,30 +34,19 @@ public class GraphicUI implements Observer {
 
     public GraphicUI(int width, int height, Controller _controller, Subject _subject){
         controller = _controller;
-        TetrisModel = _subject;
-        createWindow(width, height);
-        updater.start();
-    }
-
-    public void setVisibleMainFrame(boolean flag){
-        mainFrame.setVisible(flag);
-    }
-
-    @Override
-    public void update() {
-        flagDataChanges = true;
-        //updater.interrupt();
-    }
-
-    private void changeImage(){
-        System.out.println("New Image");
-    }
-
-    private void createWindow(int width, int height){
+        model = _subject;
+/*
         mainFrame = new JFrame("Tetris");
-        mainFrame.setSize(width, height);
+        mainFrame.setSize(600, 800);
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        mainFrame.setIconImage(new ImageIcon("resources/images/main_frame_icon.jpg").getImage());
+*/
 
+        //gameFieldWindow = new GameFieldWindow(width, height, mainFrame);
+        mainWindow = new MainWindow(controller);
+
+        //mainFrame.add(gameFieldWindow);
+/*
         mainFrame.addKeyListener(new KeyListener()
         {
             @Override
@@ -71,27 +62,24 @@ public class GraphicUI implements Observer {
             @Override
             public void keyReleased(KeyEvent e) {}
         });
-
         mainFrame.setFocusable(true);
 
-        //createMenuButton();
+        mainFrame.setVisible(true);
+
+ */
+        updater.start();
     }
 
-    private void createMenuButton(){
-        ImageIcon buttonIcon = new ImageIcon("C:/Users/User/IdeaProjects/FIT_NSU4/JAVA_OOP/tetris/recourses/menu_button.png");
-        JButton menuButton = new JButton(buttonIcon);
 
-        menuButton.addMouseListener( new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                controller.execute(CommandTetris.Menu);
-                System.out.println("Menu clicked");
-                menuButton.setFocusable(false);
-            }
-        });
-        JToolBar mainFrameBox = new JToolBar();
-        mainFrameBox.add(menuButton);
-        System.out.println(buttonIcon.getImageLoadStatus() == MediaTracker.COMPLETE);
-        mainFrame.add(mainFrameBox);
+    @Override
+    public void update() {
+        flagDataChanges = true;
     }
+
+    private void changeImage(){
+        Package info = (Package) model.getInfo();
+
+        System.out.println("New Image");
+    }
+
 }
