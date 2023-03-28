@@ -8,20 +8,32 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
-public class RightBank extends JPanel {
+public class RightBank extends JComponent {
     private final Controller controller;
 
-    RightBank(JLayeredPane jp, Controller controller){
+    RightBank(Controller controller){
         this.controller = controller;
-        //setLayout(null);
-        setBounds(10, 0,100,800);
-        createMenuButton(jp);
+        setBounds(150, 450, 150, 800);
+        setLayout(null);
+        createMenuButton();
     }
 
-    private void createMenuButton(JLayeredPane jp){
-        JButton menuButton = new JButton(new ImageIcon("resources/images/menu_button.png"));
+    @Override
+    public void paintComponent(Graphics g){
+        Graphics2D mainRect = (Graphics2D) g;
+        mainRect.setColor(new Color(63, 76, 62, 255));
+        mainRect.fillRect(450, 0, 180, 800);
+    }
 
-        menuButton.addMouseListener( new MouseAdapter() {
+    private void createMenuButton(){
+        JButton menuButton = new JButton(new ImageIcon("resources/images/menu_button.png"));
+        menuButton.setRolloverIcon(new ImageIcon("resources/images/menu_button_pressed.png"));
+        menuButton.setBorderPainted(false);
+        menuButton.setFocusPainted(false);
+        menuButton.setContentAreaFilled(false);
+        menuButton.setBounds(490,690,64,64);
+
+        menuButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 controller.execute(CommandTetris.Menu);
@@ -29,7 +41,6 @@ public class RightBank extends JPanel {
                 menuButton.setFocusable(false);
             }
         });
-
         add(menuButton);
     }
 }
