@@ -56,9 +56,9 @@ void createfile(int argc, char** argv){
 		return;
 	}
 
-	int newfd = open(argv[1], S_IRWXU);
+	int newfd = open(argv[1], O_CREAT, 0600);
 	if(newfd == -1){
-		printf("File creationg error.\n");
+		printf("File creation error.\n");
 	}
 	utimensat(newfd, argv[1], NULL, 0); //set current time
 
@@ -161,7 +161,19 @@ void changemode(int argc, char** argv){
 	}
 
 	struct stat fstat;
-	if( chmod(argv[1], atoi(argv[2])) == -1 ){
+/*
+	int mode=0;
+	for(int i = 0; i < 4; ++i){
+		int num = 0;
+		for(int j = 0; j < 3; ++j){
+			num += argv[2][i]%2 << j;
+			argv[2][i] /= 2;
+		}
+		mode += num << ((3-i)*3);
+	}
+*/	
+	
+	if( chmod(argv[1], strtoll(argv[2], NULL, 8)) == -1 ){
 		printf("Error: syscall chmod() error.\n");
 	}
 }
