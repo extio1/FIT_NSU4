@@ -14,13 +14,14 @@ public class MainWindow extends JFrame {
     MainWindow(Controller controller){
         super("Tetris");
         this.controller = controller;
-        RightBank rb = new RightBank(lp, controller);
+        RightBank rb = new RightBank(controller);
 
         setBounds(600, 100, 600, 800);
-        setBackground(Color.RED);
         setResizable(false);
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setIconImage(new ImageIcon("resources/images/main_frame_icon.jpg").getImage());
+
+        //lp.add(rb, JLayeredPane.PALETTE_LAYER);
         add(rb);
 
         addKeyListener(new KeyListener()
@@ -63,6 +64,5 @@ public class MainWindow extends JFrame {
         });
 
         setFocusable(true);
-        setVisible(true);
     }
 }
