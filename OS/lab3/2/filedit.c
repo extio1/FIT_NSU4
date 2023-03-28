@@ -151,7 +151,9 @@ void showstat(int argc, char** argv){
 		printf("Error: syscall stat() error.\n");
 	}
 
-	printf("Permissions: %d; Hard links: %ld;\n", fstat.st_mode & 0777, fstat.st_nlink);
+	printf("Permissions: %o; Hard links: %ld;\n", fstat.st_mode & 0777, fstat.st_nlink);
+	printf("Is setuid set: %d; Is setgid set: %d;\n", (fstat.st_mode & S_ISUID) > 0, (fstat.st_mode & S_ISGID) > 0);
+	printf("Is sticky-bit set: %d\n", (fstat.st_mode & S_ISVTX) > 0);
 }
 
 void changemode(int argc, char** argv){
@@ -161,17 +163,6 @@ void changemode(int argc, char** argv){
 	}
 
 	struct stat fstat;
-/*
-	int mode=0;
-	for(int i = 0; i < 4; ++i){
-		int num = 0;
-		for(int j = 0; j < 3; ++j){
-			num += argv[2][i]%2 << j;
-			argv[2][i] /= 2;
-		}
-		mode += num << ((3-i)*3);
-	}
-*/	
 	
 	if( chmod(argv[1], strtoll(argv[2], NULL, 8)) == -1 ){
 		printf("Error: syscall chmod() error.\n");
