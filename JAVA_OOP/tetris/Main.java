@@ -1,4 +1,4 @@
-import view.GUI.GraphicUI;
+import view.gui.GraphicUI;
 import controller.CommandTetris;
 import controller.Controller;
 import controller.TetrisController;
@@ -15,15 +15,11 @@ public class Main {
         Controller controller = new TetrisController(game);
 
         GraphicUI ui = new GraphicUI(800, 600, controller, game);
-        ui.setVisibleMainFrame(true);
+        //ui.setVisibleMainFrame(true);
 
         game.attach(ui);
 
         game.turnOn();
-
-        controller.execute(CommandTetris.Left);
-        sleep(60000);
-        controller.execute(CommandTetris.Exit);
 
     }
 }

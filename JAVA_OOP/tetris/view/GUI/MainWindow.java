@@ -9,20 +9,24 @@ import java.awt.event.*;
 
 public class MainWindow extends JFrame {
     private final Controller controller;
+    private final GraphicUI myGui;
     private final JLayeredPane lp = getLayeredPane();
 
-    MainWindow(Controller controller){
+    MainWindow(Controller controller, GraphicUI myGui){
         super("Tetris");
+        this.myGui = myGui;
         this.controller = controller;
         RightBank rb = new RightBank(controller);
+        GameField gf = new GameField();
 
         setBounds(600, 100, 600, 800);
         setResizable(false);
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setIconImage(new ImageIcon("resources/images/main_frame_icon.jpg").getImage());
 
-        //lp.add(rb, JLayeredPane.PALETTE_LAYER);
+        lp.add(rb, JLayeredPane.PALETTE_LAYER);
         add(rb);
+        add(gf);
 
         addKeyListener(new KeyListener()
         {
@@ -58,11 +62,14 @@ public class MainWindow extends JFrame {
 
                 if (rc == 0) {
                     event.getWindow().setVisible(false);
-                    System.exit(0);
+                    controller.execute(CommandTetris.Exit);
+                    myGui.killMe();
+                    dispose();
                 }
             }
         });
 
+        setVisible(true);
         setFocusable(true);
     }
 }

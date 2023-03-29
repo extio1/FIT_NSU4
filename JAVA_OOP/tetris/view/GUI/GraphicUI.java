@@ -15,7 +15,6 @@ public class GraphicUI implements Observer {
 
     private JFrame mainFrame;
     private MainWindow mainWindow;
-    private GameFieldWindow gameFieldWindow;
 
     private volatile boolean flagDataChanges = false;
 
@@ -25,48 +24,28 @@ public class GraphicUI implements Observer {
             while(!Thread.interrupted()){
                 if(flagDataChanges){
                     System.out.println("Data updated, asking for model");
-                    changeImage();
+                    //changeImage();
                     flagDataChanges = false;
                 }
             }
         }
     });
 
+    public void killMe(){
+        updater.interrupt();
+    }
+
     public GraphicUI(int width, int height, Controller _controller, Subject _subject){
         controller = _controller;
         model = _subject;
-/*
+
         mainFrame = new JFrame("Tetris");
         mainFrame.setSize(600, 800);
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         mainFrame.setIconImage(new ImageIcon("resources/images/main_frame_icon.jpg").getImage());
-*/
 
-        //gameFieldWindow = new GameFieldWindow(width, height, mainFrame);
-        mainWindow = new MainWindow(controller);
+        mainWindow = new MainWindow(controller, this);
 
-        //mainFrame.add(gameFieldWindow);
-/*
-        mainFrame.addKeyListener(new KeyListener()
-        {
-            @Override
-            public void keyTyped(KeyEvent e) {}
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode()==KeyEvent.VK_LEFT) controller.execute(CommandTetris.Left);
-                if (e.getKeyCode()==KeyEvent.VK_RIGHT) controller.execute(CommandTetris.Right);
-                if (e.getKeyCode()==KeyEvent.VK_UP) controller.execute(CommandTetris.Up);
-                if (e.getKeyCode()==KeyEvent.VK_DOWN) controller.execute(CommandTetris.Down);
-                if (e.getKeyCode()==KeyEvent.VK_ESCAPE) controller.execute(CommandTetris.Menu);
-            }
-            @Override
-            public void keyReleased(KeyEvent e) {}
-        });
-        mainFrame.setFocusable(true);
-
-        mainFrame.setVisible(true);
-
- */
         updater.start();
     }
 

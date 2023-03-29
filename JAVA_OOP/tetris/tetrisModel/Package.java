@@ -12,6 +12,7 @@ public class Package {
     Package(int xsf, int ysf){
         X_SIZE_FLD = xsf;
         Y_SIZE_FLD = ysf;
+        gameField = new int[X_SIZE_FLD][Y_SIZE_FLD];
     }
 
     public void setGameField(int[][] gf){

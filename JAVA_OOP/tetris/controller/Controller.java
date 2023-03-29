@@ -1,5 +1,5 @@
 package controller;
 
-public interface Controller<ModelT> {
+public interface Controller {
     void execute(CommandTetris comm);
 }

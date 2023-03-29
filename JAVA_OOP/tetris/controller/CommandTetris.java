@@ -8,5 +8,6 @@ public enum CommandTetris {
     HighScores,
     NewGame,
     About,
+    Menu,
     Exit
 }
