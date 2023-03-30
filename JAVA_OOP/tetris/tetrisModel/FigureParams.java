@@ -1,9 +1,10 @@
 package tetrisModel;
 
 public class FigureParams {
-    private int posXPointer;        // текущая позиция. Указывает на левый верхний угол
-    private int posYPointer;        // фигуры
-    private byte currentCondition;  // текущее состояние
+    private volatile int posXPointer;        // текущая позиция. Указывает на левый верхний угол
+    private volatile int posYPointer;        // фигуры
+    private volatile byte currentCondition;  // текущее состояние
+    private volatile int ordinal;
 
     private final byte maximCondition;
     private final byte[][] pointerShiftByChangingCondition;
@@ -22,18 +23,21 @@ public class FigureParams {
     public int getPosX(){ return posXPointer; }
     public int getPosY(){ return posYPointer; }
     public byte[] getCondition() { return conditions[currentCondition]; }
-    public byte getWidth() { return size[currentCondition][1]; }
-    public byte getLength() { return size[currentCondition][0]; }
+    public byte getWidth() { return size[currentCondition][0]; }
+    public byte getLength() { return size[currentCondition][1]; }
     public byte[] getPointerShiftToNextPos() { return pointerShiftByChangingCondition[currentCondition]; }
-
     public int[] getNextConditionPos() {
         int nextCond = ((currentCondition + 1) % maximCondition);
         return new int[]{posXPointer, posYPointer};
+    }
+    public int getOrdinal() {
+        return ordinal;
     }
 
     public void setNextCondition() { currentCondition = (byte) ((currentCondition + 1) % maximCondition); }
     public void setPosX(int pos){ posXPointer = pos; }
     public void setPosY(int pos){ posYPointer = pos; }
+    public void setOrdinal(int o){ ordinal = o; }
 
     public void refresh(){
         posXPointer = 5;
