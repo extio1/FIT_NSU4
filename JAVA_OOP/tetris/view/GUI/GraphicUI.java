@@ -1,13 +1,10 @@
 package view.gui;
 
-import controller.CommandTetris;
 import controller.Controller;
 import tetrisModel.Package;
 import view.observation.*;
 
 import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
 
 public class GraphicUI implements Observer {
     private final Controller controller;
@@ -24,18 +21,14 @@ public class GraphicUI implements Observer {
             while(!Thread.interrupted()){
                 if(flagDataChanges){
                     System.out.println("Data updated, asking for model");
-                    //changeImage();
+                    changeImage();
                     flagDataChanges = false;
                 }
             }
         }
     });
 
-    public void killMe(){
-        updater.interrupt();
-    }
-
-    public GraphicUI(int width, int height, Controller _controller, Subject _subject){
+    public GraphicUI(int width, int height, Controller _controller, Subject _subject) throws InterruptedException {
         controller = _controller;
         model = _subject;
 
@@ -44,11 +37,14 @@ public class GraphicUI implements Observer {
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         mainFrame.setIconImage(new ImageIcon("resources/images/main_frame_icon.jpg").getImage());
 
-        mainWindow = new MainWindow(controller, this);
+        mainWindow = new MainWindow(width, height, controller, this);
 
         updater.start();
     }
 
+    public void killMe(){
+        updater.interrupt();
+    }
 
     @Override
     public void update() {
@@ -56,9 +52,7 @@ public class GraphicUI implements Observer {
     }
 
     private void changeImage(){
-        Package info = (Package) model.getInfo();
-
-        System.out.println("New Image");
+        mainWindow.updateWindow((Package) model.getInfo());
     }
 
 }
