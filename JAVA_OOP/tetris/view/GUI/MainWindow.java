@@ -2,6 +2,7 @@ package view.gui;
 
 import controller.CommandTetris;
 import controller.Controller;
+import tetrisModel.Package;
 
 import javax.swing.*;
 import java.awt.*;
@@ -12,21 +13,34 @@ public class MainWindow extends JFrame {
     private final GraphicUI myGui;
     private final JLayeredPane lp = getLayeredPane();
 
-    MainWindow(Controller controller, GraphicUI myGui){
+    private final RightBank rb;
+    private final GameField gf;
+
+    public void updateWindow(Package pkg){
+        rb.updateNextFigure(pkg.getFigureView(), pkg.getFigureWidth(), pkg.getFigureLength(), pkg.getFigureNumber());
+        gf.updateFallingFigure(pkg.getFigureView(), pkg.getFigureWidth(), pkg.getFigureLength(),
+                               pkg.getFigurePosX(), pkg.getFigurePosY(), pkg.getFigureNumber());
+        gf.updateField(pkg.getGameField());
+    }
+
+    MainWindow(int xSize, int ySize, Controller controller, GraphicUI myGui) throws InterruptedException {
         super("Tetris");
         this.myGui = myGui;
         this.controller = controller;
-        RightBank rb = new RightBank(controller);
-        GameField gf = new GameField();
 
-        setBounds(600, 100, 600, 800);
+        rb = new RightBank(controller, lp);
+        gf = new GameField();
+
+        setBounds(100, 100, 610, 800);
         setResizable(false);
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setIconImage(new ImageIcon("resources/images/main_frame_icon.jpg").getImage());
 
         lp.add(rb, JLayeredPane.PALETTE_LAYER);
-        add(rb);
+        lp.add(gf, JLayeredPane.PALETTE_LAYER);
+
         add(gf);
+        add(rb);
 
         addKeyListener(new KeyListener()
         {
@@ -72,4 +86,5 @@ public class MainWindow extends JFrame {
         setVisible(true);
         setFocusable(true);
     }
+
 }
