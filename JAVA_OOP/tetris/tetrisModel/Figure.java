@@ -63,7 +63,7 @@ public enum Figure {
         return calcBuffer;
     }
 
-    public void refreshFigure(){
+    public void newFigure(){
         params.refresh();
     }
 
@@ -74,6 +74,14 @@ public enum Figure {
     public void rotate(){
         params.setPosX(params.getPointerShiftToNextPos()[0] + params.getPosX());
         params.setPosY(params.getPointerShiftToNextPos()[1] + params.getPosY());
+    }
+
+    public void moveRight(){
+        params.setPosX(params.getPosX()+1);
+    }
+
+    public void moveLeft(){
+        params.setPosX(params.getPosX()-1);
     }
 
     public void moveDown(){
