@@ -10,6 +10,11 @@ public class Tetris implements Subject {
     private static int X_SIZE_FLD;
     private static int Y_SIZE_FLD;
 
+    private static final byte IN_UP     = 0;
+    private static final byte IN_LEFT   = 1;
+    private static final byte IN_DOWN   = 2;
+    private static final byte IN_RIGHT  = 3;
+
     private final List<Observer> observers = new ArrayList<>();
     private final Package packageToObserver;
 
@@ -117,15 +122,28 @@ public class Tetris implements Subject {
 
     public void left(){
         if(gameRunning) {
-            System.out.println("DO LEFT");
-            signalyzeAll();
+            int newPosX = fallingFigure.params.getPosX() - 1;
+            int newPosY = fallingFigure.params.getPosY();
+            if (newPosX >= 0) {
+                for(int i = 0; i < fallingFigure.params.getWidth(); ++i){
+                    for(int j = 0; j < fallingFigure.params.getLength(); ++j){
+
+                    }
+                }
+                fallingFigure.moveLeft();
+                signalyzeAll();
+            }
         }
     }
 
     public void right(){
         if(gameRunning) {
-            System.out.println("DO RIGHT");
-            signalyzeAll();
+            int newPosX = fallingFigure.params.getPosX() + fallingFigure.params.getWidth() + 1;
+            int newPosY = fallingFigure.params.getPosY();
+            if (newPosX <= X_SIZE_FLD && gameField[newPosX][newPosY] == 0) {
+                fallingFigure.moveRight();
+                signalyzeAll();
+            }
         }
     }
 
@@ -226,9 +244,11 @@ public class Tetris implements Subject {
     }
 
     private void generateNewFallingFigure(){
-        figureCounter += 1;
+        figureCounter += 10;
         fallingFigure = tetrisFigures[(randomGenerator.nextInt(N_FIGURES_IN_TETRIS))];
-        fallingFigure.refreshFigure();
+        fallingFigure.newFigure();
+        fallingFigure.params.setOrdinal(figureCounter);
+
         System.out.println(fallingFigure);
     }
 
@@ -243,9 +263,29 @@ public class Tetris implements Subject {
             for(int j = 0; j < width; ++j){
                 if(figureView[i*width+j]==1) {
                     gameField[xPos + j][yPos + i] = figureCounter;
-                    ++figureCounter;
                 }
             }
         }
+    }
+
+    private boolean isFreeOnDirection(byte directionNumber){
+        int xPos = fallingFigure.params.getPosX();
+        int yPos = fallingFigure.params.getPosY();
+        int length = fallingFigure.params.getLength();
+        int width = fallingFigure.params.getWidth();
+        byte[] figureView = fallingFigure.params.getCondition();
+
+        switch (directionNumber){
+            case IN_LEFT -> {
+                for(int i = 0; i < length; ++i){
+                    for(int j = 0; j < width; ++j){
+                        if(gameField[xPos+j][yPos+i] != 0){
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        return true;
     }
 }
