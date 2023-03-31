@@ -10,10 +10,12 @@ public class Tetris implements Subject {
     private static int X_SIZE_FLD;
     private static int Y_SIZE_FLD;
 
-    private static final byte IN_UP     = 0;
-    private static final byte IN_LEFT   = 1;
-    private static final byte IN_DOWN   = 2;
-    private static final byte IN_RIGHT  = 3;
+    private enum Direction {
+        UP,
+        LEFT,
+        DOWN,
+        RIGHT
+    }
 
     private final List<Observer> observers = new ArrayList<>();
     private final Package packageToObserver;
@@ -123,13 +125,7 @@ public class Tetris implements Subject {
     public void left(){
         if(gameRunning) {
             int newPosX = fallingFigure.params.getPosX() - 1;
-            int newPosY = fallingFigure.params.getPosY();
-            if (newPosX >= 0) {
-                for(int i = 0; i < fallingFigure.params.getWidth(); ++i){
-                    for(int j = 0; j < fallingFigure.params.getLength(); ++j){
-
-                    }
-                }
+            if (newPosX >= 0 && isFreeOnDirection(Direction.LEFT)) {
                 fallingFigure.moveLeft();
                 signalyzeAll();
             }
@@ -138,9 +134,8 @@ public class Tetris implements Subject {
 
     public void right(){
         if(gameRunning) {
-            int newPosX = fallingFigure.params.getPosX() + fallingFigure.params.getWidth() + 1;
-            int newPosY = fallingFigure.params.getPosY();
-            if (newPosX <= X_SIZE_FLD && gameField[newPosX][newPosY] == 0) {
+            int newPosX = fallingFigure.params.getPosX() + fallingFigure.params.getWidth();
+            if (newPosX < X_SIZE_FLD && isFreeOnDirection(Direction.RIGHT)) {
                 fallingFigure.moveRight();
                 signalyzeAll();
             }
@@ -149,33 +144,25 @@ public class Tetris implements Subject {
 
     public void up(){
         if(gameRunning) {
-            // checking if is it possible to rotate the figure
-            int[] newPointerCoordinates = fallingFigure.getCoordinatesInFieldAfterRotate();
-            int xPos = newPointerCoordinates[0];
-            int yPos = newPointerCoordinates[1];
-
-            // traverse cells of the figure after rotate and check if some figures have already located here
-            for(int i = 0; i < fallingFigure.params.getLength(); ++i){
-                for(int j = 0; j < fallingFigure.params.getWidth(); ++j){
-                    if(gameField[yPos+i][xPos + j] != 0 && fallingFigure.isItAreRealPartOfFigure(i, j)){
-                        return;
-                    }
-                }
+            if(isFreeOnDirection(Direction.UP)) {
+                fallingFigure.rotate();
+                signalyzeAll();
             }
 
+            /*
             if (xPos < 0){
                 // checking if it's possible to move the figure to some offset right
-                if(gameField[yPos][xPos + fallingFigure.params.getWidth() + Math.abs(xPos)] != 0){
+                if(gameField[xPos][yPos + fallingFigure.params.getWidth() + Math.abs(xPos)] != 0){
                     return;
                 }
             } else if (xPos > X_SIZE_FLD) {
                 // checking if it's possible to move the figure to some offset left
-                if(gameField[yPos][xPos - (xPos - X_SIZE_FLD)] != 0){
+                if(gameField[xPos][yPos - (xPos - X_SIZE_FLD)] != 0){
                     return;
                 }
-            }
+            }*/
 
-            fallingFigure.rotate();
+
 
             System.out.println("DO UP");
             signalyzeAll();
@@ -268,18 +255,50 @@ public class Tetris implements Subject {
         }
     }
 
-    private boolean isFreeOnDirection(byte directionNumber){
+    private boolean isFreeOnDirection(Direction direction){
         int xPos = fallingFigure.params.getPosX();
         int yPos = fallingFigure.params.getPosY();
         int length = fallingFigure.params.getLength();
         int width = fallingFigure.params.getWidth();
         byte[] figureView = fallingFigure.params.getCondition();
 
-        switch (directionNumber){
-            case IN_LEFT -> {
+        switch (direction){
+            case LEFT -> {
                 for(int i = 0; i < length; ++i){
                     for(int j = 0; j < width; ++j){
-                        if(gameField[xPos+j][yPos+i] != 0){
+                        if(gameField[xPos+j-1][yPos+i] != 0 && figureView[i*width+j] == 1){
+                            return false;
+                        }
+                    }
+                }
+            }
+            case RIGHT -> {
+                for(int i = 0; i < length; ++i){
+                    for(int j = 0; j < width; ++j){
+                        if(gameField[xPos+j+1][yPos+i] != 0 && figureView[i*width+j] == 1){
+                            return false;
+                        }
+                    }
+                }
+            }
+            case UP -> {
+                int[] newPointerCoordinates = fallingFigure.getCoordinatesInFieldAfterRotate();
+                int newPosX = newPointerCoordinates[0];
+                int newPosY = newPointerCoordinates[1];
+                if(newPosX >= X_SIZE_FLD){
+                    int offsetPosX = xPos - (newPosX - X_SIZE_FLD);
+                    if(gameField[offsetPosX][newPosY] != 0){
+                        return false;
+                    } else {
+                        fallingFigure.params.setPosX(offsetPosX);
+                    }
+                }
+                if(newPosY + length >= Y_SIZE_FLD || newPosY < 0){
+                    return false;
+                }
+                for(int i = 0; i < length; ++i){
+                    for(int j = 0; j < width; ++j){
+                        if(gameField[xPos+j][yPos+i] != 0 && figureView[i*width+j] == 1){
                             return false;
                         }
                     }
