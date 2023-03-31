@@ -25,16 +25,16 @@ public class FigureParams {
     public byte[] getCondition() { return conditions[currentCondition]; }
     public byte getWidth() { return size[currentCondition][0]; }
     public byte getLength() { return size[currentCondition][1]; }
-    public byte[] getPointerShiftToNextPos() { return pointerShiftByChangingCondition[currentCondition]; }
+    public byte[] getPointerShiftToNextPos() { return pointerShiftByChangingCondition[(currentCondition+1) % maximCondition]; }
     public int[] getNextConditionPos() {
         int nextCond = ((currentCondition + 1) % maximCondition);
-        return new int[]{posXPointer, posYPointer};
+        return new int[]{posXPointer+pointerShiftByChangingCondition[nextCond][0], posYPointer+pointerShiftByChangingCondition[nextCond][1]};
     }
     public int getOrdinal() {
         return ordinal;
     }
 
-    public void setNextCondition() { currentCondition = (byte) ((currentCondition + 1) % maximCondition); }
+    public synchronized void setNextCondition() { currentCondition = (byte) ((currentCondition + 1) % maximCondition); }
     public void setPosX(int pos){ posXPointer = pos; }
     public void setPosY(int pos){ posYPointer = pos; }
     public void setOrdinal(int o){ ordinal = o; }
