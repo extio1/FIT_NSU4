@@ -1,22 +1,19 @@
-import view.gui.GraphicUI;
-import controller.CommandTetris;
 import controller.Controller;
 import controller.TetrisController;
-import tetrisModel.Tetris;
 
-import javax.swing.*;
+import model.Tetris;
 
-import static java.lang.Thread.sleep;
+import viewer.gui.GraphicUI;
+
 
 public class Main {
     public static void main(String[] args) throws InterruptedException {
+        int WIDTH_SIZE_GAME_FIELD = 10;
+        int LENGTH_SIZE_GAME_FIELD = 20;
 
         Tetris game = new Tetris();
         Controller controller = new TetrisController(game);
-
-        GraphicUI ui = new GraphicUI(800, 600, controller, game);
-        //ui.setVisibleMainFrame(true);
-
+        GraphicUI ui = new GraphicUI(WIDTH_SIZE_GAME_FIELD, LENGTH_SIZE_GAME_FIELD, controller, game);
         game.attach(ui);
 
         game.turnOn();
