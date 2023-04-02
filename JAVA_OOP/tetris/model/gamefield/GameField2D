@@ -1,0 +1,84 @@
+package model.gamefield;
+
+import model.Figure;
+import model.exception.DimensionOutOfField;
+import model.exception.IndexOutOfField;
+import model.GameField;
+
+public class GameField2D implements GameField {
+    private final int X_SIZE_FLD;
+    private final int Y_SIZE_FLD;
+    private final int[] gameField;
+
+    public GameField2D(){
+        this(10, 20);
+    }
+    public GameField2D(int x, int y){
+        gameField = new int[x*y];
+        X_SIZE_FLD = x;
+        Y_SIZE_FLD = y;
+
+        for(int i = 0; i < x; ++i){
+            for(int j = 0; j < y; ++j){
+                gameField[i * x + j] = 0;
+            }
+        }
+
+    }
+
+    @Override
+    public int[] getRepresentation(){
+        return gameField.clone();
+    }
+
+    @Override
+    public boolean isCellFree(int x, int y) throws IndexOutOfField {
+        if(x > X_SIZE_FLD-1){
+            throw new IndexOutOfField(x, X_SIZE_FLD, 'X');
+        }
+        if(y > Y_SIZE_FLD-1){
+            throw new IndexOutOfField(y, Y_SIZE_FLD, 'Y');
+        }
+        return gameField[y * X_SIZE_FLD + x] == 0;
+    }
+
+    @Override
+    public void assignValueToPosition(Object value, int ... pos) throws IndexOutOfField, DimensionOutOfField {
+        if(pos.length != 2){
+            throw new DimensionOutOfField(pos.length, 2);
+        }
+        int x = pos[0];
+        int y = pos[1];
+        if(x >= X_SIZE_FLD || x < 0 ){
+            throw new IndexOutOfField(x, X_SIZE_FLD, 'X');
+        }
+        if(y >= Y_SIZE_FLD || y < 0 ){
+            throw new IndexOutOfField(y, Y_SIZE_FLD, 'Y');
+        }
+
+        Integer val = (Integer) value;
+        gameField[y * X_SIZE_FLD + x] = val;
+    }
+
+    /*
+
+            ВОПРОС: Можно ли применять такую оптимизацию?
+            Иметь приватным полем буфер и отдавать его по запросу, чтобы не пересоздавать
+            каждый раз в куче массив? (это долго)
+
+     */
+
+    private final int[] sizeBuffer = new int[2];
+    @Override
+    public int[] getSizeField(){
+        sizeBuffer[0] = X_SIZE_FLD;
+        sizeBuffer[1] = Y_SIZE_FLD;
+        return sizeBuffer;
+    }
+
+    @Override
+    public void removeFullLayers(){
+
+    }
+
+}
