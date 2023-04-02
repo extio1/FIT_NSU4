@@ -1,6 +1,7 @@
 package model;
 
 import model.exception.*;
+import model.figure.FigureDescriptor;
 import model.figure.FigureParams;
 
 public enum Figure {
@@ -61,8 +62,10 @@ public enum Figure {
     }
 
     private final FigureParams params;
+    private final FigureDescriptor descriptor;
     Figure(FigureParams params){
         this.params = params;
+        descriptor = new FigureDescriptor();
     }
 
     public void newFigure(int myNum){
@@ -92,6 +95,11 @@ public enum Figure {
         buffer[3] = params.getPosX();
         buffer[4] = params.getPosY();
         buffer[5] = params.getOrdinal();
+    }
+
+    public FigureDescriptor getDescriptor(){
+        descriptor.setFigureDescriptorBy(this);
+        return descriptor;
     }
 
     public void addFigureToField(GameField gf) throws FigureAddingToFieldException {
