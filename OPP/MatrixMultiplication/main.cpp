@@ -66,16 +66,16 @@ void mult_mat(const double* a, const double* b, double* c, const int n1, const i
 }
 */
 
-void make_col_row_types(MPI_Datatype* RowAType, MPI_Datatype* ColBType, const int* aMatDisctrib, const int* bMatDisctrib, const int* myCardCoords){ 
+void make_col_row_types(MPI_Datatype* RowAType, MPI_Datatype* ColBType){ 
 	//Создание и регистрация производных типов данных: столбец и строка матрицы
 
 	MPI_Datatype ColBtypeUnaligned;
-	if (MPI_Type_contiguous(N2*aMatDisctrib[myCardCoords[1]], MPI_DOUBLE, RowAType) != MPI_SUCCESS) printf("Error while MPI_Type_contiguous().\n");
-	if (MPI_Type_vector(N2, bMatDisctrib[myCardCoords[0]], N3 - 1, MPI_DOUBLE, &ColBtypeUnaligned) != MPI_SUCCESS) printf("Error while MPI_Type_contiguous().\n");
+	if (MPI_Type_contiguous(N2, MPI_DOUBLE, RowAType) != MPI_SUCCESS) printf("Error while MPI_Type_contiguous().\n");
+	if (MPI_Type_vector(N2, 1, N3 - 1, MPI_DOUBLE, &ColBtypeUnaligned) != MPI_SUCCESS) printf("Error while MPI_Type_contiguous().\n");
 	MPI_Type_commit(RowAType);
 	MPI_Type_commit(&ColBtypeUnaligned);
 
-	MPI_Type_create_resized(ColBtypeUnaligned, 0, sizeof(double)*bMatDisctrib[myCardCoords[0]], ColBType);
+	MPI_Type_create_resized(ColBtypeUnaligned, 0, sizeof(double), ColBType);
 	MPI_Type_commit(ColBType);
 
 	MPI_Type_free(&ColBtypeUnaligned);
@@ -184,7 +184,10 @@ int main(int argc, char** argv) {
 	if (MPI_Comm_split(cartComm, MAKE_DIFFERENT_FROM_ROWS(myCardCoords[1]), myCardCoords[1], &myColComm) != MPI_SUCCESS)
 		printf("Error while MPI_Comm_split().\n");
 
-
+	//  Данная структура по сути будет сопоставлять значению x в сетке процессов количество столбцов в подматрице В,
+	// а координате y количество строк в подматрице А, распределенных по декартовой топологии процессов.
+	// Стоит заметить, что другая размерность матрицы в обоих случаях будет равна N2
+	// из-за чего умножение такие горизонтальных и вертикальных полос возможно и корректно.
 	ScattervParam aMatScatterv, bMatScatterv;
 	define_scatterv_matrixs(&aMatScatterv, &bMatScatterv, xSizeCart, ySizeCart);
 
@@ -215,17 +218,19 @@ if(rankWorld == 0){
 
 
 	//Определяем подматрицы A и В, с которыми будет работать каждый процесс в декартовой топологии
-	AMat.xSize = N2; AMat.ySize = aMatScatterv.size[rankCart];
-	BMat.xSize = b; BMat.ySize = N2;
+	AMat.xSize = N2; AMat.ySize = aMatScatterv.size[myCardCoords[1]];
+	BMat.xSize = bMatScatterv.size[myCardCoords[0]]; BMat.ySize = N2;
+	CMat.xSize = bMatScatterv.size[myCardCoords[0]]; CMat.ySize = aMatScatterv.size[myCardCoords[1]];
 	AMat.data = (double*)malloc(sizeof(double)*AMat.ySize*AMat.xSize);
 	BMat.data = (double*)malloc(sizeof(double)*BMat.xSize*BMat.ySize);
+	CMat.data = (double*)сalloc(sizeof(double)*CMat.xSize*CMat.ySize);
 
 	// 1Шаг: рассылаем из (0, 0) на крайнюю верхнюю строку и левый столбец
 	// 	горизонтальные и вертикальные полосы определенного для каждого
 	// 	процесса размера
 	if(myCardCoords[0] == 0){
 		MPI_Scatterv(AFull, aMatScatterv.size, aMatScatterv.offset, RowAType,
-					 AMat.data, AMat.xSize*N2, MPI_DOUBLE, 0, myRowComm);
+					 AMat.data, AMat.ySize*N2, MPI_DOUBLE, 0, myRowComm);
 	}
 	if(myCardCoords[1] == 0){
 		MPI_Scatterv(BFull, bMatScatterv.size, bMatScatterv.offset, ColBType,
@@ -234,8 +239,17 @@ if(rankWorld == 0){
 
 	// 2Шаг: каждый процесс на верхней строке и левом столбце делает
 	// broadcast в пределах коммуникатора своего столбца и строки соответсвенно
-	MPI_Bcast(A)
+	MPI_Bcast(BMat.data, bMatScatterv.size[myCardCoords[0]], ColBType, 0, myColComm);
+	MPI_Bcast(AMat.data, aMatScatterv.size[myCardCoords[1]], RowAType, 0, myRowComm);
 
+	// 3Шаг: непосредственно умножение
+	for (int i = 0; i < AMat.ySize; ++i) {
+        for (int k = 0; k < AMat.xSize; ++k) {
+            for (int j = 0; j < BMat.xSize; ++j)
+                CMat.data[i * BMat.xSize + j] += AMat.data[i*BMat.ySize + k] * BMat.data[k * BMat.xSize + j];
+        }
+    }
+ 
 
 
 //Освобождние ресурсов
@@ -245,6 +259,7 @@ if(rankWorld == 0){
 
 	free(AMat.data);
 	free(BMat.data);
+	free(CMat.data);
 	free(aMatScatterv.size);
 	free(bMatScatterv.size);
 	free(aMatScatterv.offset);
