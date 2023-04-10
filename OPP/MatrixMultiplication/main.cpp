@@ -66,15 +66,16 @@ void mult_mat(const double* a, const double* b, double* c, const int n1, const i
 }
 */
 
-void make_col_row_types(MPI_Datatype* RowAType, MPI_Datatype* ColBType){ 
+void make_col_row_types(MPI_Datatype* RowAType, MPI_Datatype* ColBType, const int* aMatDisctrib, const int* bMatDisctrib, const int* myCardCoords){ 
 	//Создание и регистрация производных типов данных: столбец и строка матрицы
 
 	MPI_Datatype ColBtypeUnaligned;
-	if (MPI_Type_contiguous(N2, MPI_DOUBLE, RowAType) != MPI_SUCCESS)printf("Error while MPI_Type_contiguous().\n");
-	if (MPI_Type_vector(N2, 1, N2 - 1, MPI_DOUBLE, &ColBtypeUnaligned) != MPI_SUCCESS)printf("Error while MPI_Type_contiguous().\n");
+	if (MPI_Type_contiguous(N2*aMatDisctrib[myCardCoords[1]], MPI_DOUBLE, RowAType) != MPI_SUCCESS) printf("Error while MPI_Type_contiguous().\n");
+	if (MPI_Type_vector(N2, bMatDisctrib[myCardCoords[0]], N3 - 1, MPI_DOUBLE, &ColBtypeUnaligned) != MPI_SUCCESS) printf("Error while MPI_Type_contiguous().\n");
 	MPI_Type_commit(RowAType);
 	MPI_Type_commit(&ColBtypeUnaligned);
-	MPI_Type_create_resized(ColBtypeUnaligned, 0, sizeof(double), ColBType);
+
+	MPI_Type_create_resized(ColBtypeUnaligned, 0, sizeof(double)*bMatDisctrib[myCardCoords[0]], ColBType);
 	MPI_Type_commit(ColBType);
 
 	MPI_Type_free(&ColBtypeUnaligned);
@@ -170,58 +171,19 @@ int main(int argc, char** argv) {
 	init_cart(xSizeCart, ySizeCart, size, &cartComm);
 	MPI_Comm_rank(cartComm, &rankCart);
 
-
 	//Создание коммуникатора объединяющего процессы, находящиеся в одной строке и в одном столбце
-	//+коммуникаторы для крайнего левого столбца и верхней строки 
 	int myCardCoords[2];
 	int ignore[2];
 	if (MPI_Cart_get(cartComm, N_DIMENSIONS, ignore, ignore, myCardCoords) != MPI_SUCCESS) { printf("Error while MPI_Cart_get().\n"); }
 
+	// В новом коммутаторе процессы будут иметь нумерацию в соответсвии с их координатой
+	// в каждом столбце/строке координата по y/x уникальна в нем/ней
 	MPI_Comm myRowComm, myColComm;
-/*	MPI_Comm upperRowComm, leftColComm;
-	int a=0, b=0;
-	int* rankMostUp = (int*) malloc(sizeof(int)*xSizeCart);
-	int* rankMostLeft = (int*) malloc(sizeof(int)*ySizeCart);
-	if(myCardCoords[0] == 0){
-		rankMostLeft[a++] = rankCart;
-	} 
-	if(myCardCoords[1] == 0){
-		printf("===========%d\n", rankCart);
-		rankMostUp[b++] = rankCart;
-	}
-
-	if(rank == 0){
-		for(int i = 0; i < ySizeCart; ++i){
-			printf("%d ", rankMostUp[i]);
-		}
-		printf("\n");
-	}
-
-	MPI_Barrier(cartComm);
-
-	MPI_Group cartGroup;
-	MPI_Group leftGroup;
-	MPI_Group upGroup;
-	MPI_Comm_group (cartComm, &cartGroup);
-	if( MPI_Group_incl(cartGroup, xSizeCart, rankMostUp, &leftGroup) != MPI_SUCCESS)
-		printf("Error while MPI_Group_incl().\n");
-	if (MPI_Group_incl(cartGroup, ySizeCart, rankMostLeft, &upGroup) != MPI_SUCCESS)
-		printf("Error while MPI_Group_incl().\n");
-
-	if (MPI_Comm_create (cartComm, leftGroup, &leftColComm) != MPI_SUCCESS)
-		printf("Error while MPI_comm_create().\n");
-	if (MPI_Comm_create (cartComm, upGroup, &upperRowComm) != MPI_SUCCESS)
-		printf("Error while MPI_comm_create().\n");
-*/
-	if (MPI_Comm_split(cartComm, MAKE_DIFFERENT_FROM_COLS(myCardCoords[0]), 0, &myRowComm) != MPI_SUCCESS)
+	if (MPI_Comm_split(cartComm, MAKE_DIFFERENT_FROM_COLS(myCardCoords[0]), myCardCoords[0], &myRowComm) != MPI_SUCCESS)
 		printf("Error while MPI_Comm_split().\n");
-	if (MPI_Comm_split(cartComm, MAKE_DIFFERENT_FROM_ROWS(myCardCoords[1]), 0, &myColComm) != MPI_SUCCESS)
+	if (MPI_Comm_split(cartComm, MAKE_DIFFERENT_FROM_ROWS(myCardCoords[1]), myCardCoords[1], &myColComm) != MPI_SUCCESS)
 		printf("Error while MPI_Comm_split().\n");
 
-
-	//int sum;
-	//MPI_Allreduce(&rank, &sum, 1, MPI_INT, MPI_SUM, myColComm);
-	//printf("%d; %d,%d -- %d\n", rank, myCardCoords[0], myCardCoords[1], sum);
 
 	ScattervParam aMatScatterv, bMatScatterv;
 	define_scatterv_matrixs(&aMatScatterv, &bMatScatterv, xSizeCart, ySizeCart);
@@ -251,12 +213,16 @@ if(rankWorld == 0){
 	make_col_row_types(&RowAType, &ColBType);
 	make_submat_type(&SubMatType, aMatScatterv.size, bMatScatterv.size, myCardCoords);
 
-	//Данные массивы хранят подматрицу А и В, с которыми rank процесс будет производить операцию умножения
-	AMat.xSize = N2; AMat.ySize = aMatScatterv.size[rankCart];
-	BMat.xSize = bMatScatterv.size[rankCart]; BMat.ySize = N2;
-	AMat.data = (double*)malloc(sizeof(double)*AMat.ySize*N2);
-	BMat.data = (double*)malloc(sizeof(double)*BMat.xSize*N2);
 
+	//Определяем подматрицы A и В, с которыми будет работать каждый процесс в декартовой топологии
+	AMat.xSize = N2; AMat.ySize = aMatScatterv.size[rankCart];
+	BMat.xSize = b; BMat.ySize = N2;
+	AMat.data = (double*)malloc(sizeof(double)*AMat.ySize*AMat.xSize);
+	BMat.data = (double*)malloc(sizeof(double)*BMat.xSize*BMat.ySize);
+
+	// 1Шаг: рассылаем из (0, 0) на крайнюю верхнюю строку и левый столбец
+	// 	горизонтальные и вертикальные полосы определенного для каждого
+	// 	процесса размера
 	if(myCardCoords[0] == 0){
 		MPI_Scatterv(AFull, aMatScatterv.size, aMatScatterv.offset, RowAType,
 					 AMat.data, AMat.xSize*N2, MPI_DOUBLE, 0, myRowComm);
@@ -265,6 +231,10 @@ if(rankWorld == 0){
 		MPI_Scatterv(BFull, bMatScatterv.size, bMatScatterv.offset, ColBType,
 					 BMat.data, BMat.xSize*N2, MPI_DOUBLE, 0, myColComm);
 	}
+
+	// 2Шаг: каждый процесс на верхней строке и левом столбце делает
+	// broadcast в пределах коммуникатора своего столбца и строки соответсвенно
+	MPI_Bcast(A)
 
 
 
