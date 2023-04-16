@@ -7,9 +7,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define N1 14
-#define N2 3
-#define N3 7
+#define N1 500
+#define N2 100
+#define N3 630
 #define N_DIMENSIONS 2
 #define MAKE_DIFFERENT_FROM_COLS(row_coord) row_coord+size
 #define MAKE_DIFFERENT_FROM_ROWS(col_coord) col_coord+size*10
@@ -394,7 +394,7 @@ if(rankWorld == 0){
 
 
     if(rankWorld == 0){
-    	print_matrix(CFull, N3, N1);
+    	write_matrix(CFull, N3, N1, "CMat.txt");
     }
 /*
 
