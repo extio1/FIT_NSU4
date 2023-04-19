@@ -7,9 +7,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define N1 500
-#define N2 100
-#define N3 630
+#define N1 4567
+#define N2 3456
+#define N3 5566
 #define N_DIMENSIONS 2
 #define MAKE_DIFFERENT_FROM_COLS(row_coord) row_coord+size
 #define MAKE_DIFFERENT_FROM_ROWS(col_coord) col_coord+size*10
@@ -24,6 +24,20 @@ typedef struct Matrix {
 	int ySize;
 	double* data;
 } Matrix;
+
+void mult(double* a, double* b, double* c,  const size_t n1, const size_t n2, const size_t n3){
+        for(size_t i = 0; i < n1; ++i){
+                double* aptrSt = a+i*n2;
+                double* cptrSt = c+i*n3;
+                for(size_t k = 0; k < n2; ++k){
+                        double* aptr = aptrSt+k;
+                        double* bptrSt = b+k*n3;
+                        for(size_t j = 0; j < n3; ++j){
+                                *(cptrSt+j) += *aptr * *(bptrSt+j);
+                        }
+                }
+        }
+}
 
 void devide_job_between_processes(const int nProc, const int jobSize, int* job) {
 	int extraCells = jobSize % nProc;
@@ -58,14 +72,7 @@ void init_cart(const int xSizeCart, const int ySizeCart, const int size, MPI_Com
 
 	free(periodicOrNot);
 }
-/*
-void mult_mat(const double* a, const double* b, double* c, const int n1, const int n2, const int n3){
-	for (int i = 0; i < n; ++i)
-		for (int k = 0; k < n; ++k)
-			for (int j = 0; j < n; ++j)
-				temp.mat[i * n + j] += a.mat[i * n + k] * b.mat[k * n + j];
-}
-*/
+
 
 void make_col_row_types(MPI_Datatype* RowAType, MPI_Datatype* ColBTypeFull, MPI_Datatype* ColBTypePart, const int partBsizeX){ 
 	//Создание и регистрация производных типов данных: столбец и строка матрицы
@@ -102,8 +109,6 @@ void make_submat_types(MPI_Datatype* SubMatType, const int* aMatDisctrib, const 
 		}
 	}
 
-	//MPI_Type_create_resized(SubMatUnaligned[0], 0, bMatDisctrib[myCardCoords[0]], SubMatType[0]);
-	//MPI_Type_commit(&SubMatType[0]);
 	for(int i = 0; i < xSizeCart; ++i){
 		for(int j = 0; j < ySizeCart; ++j){
 			int offsetBeginCMat = 0;
@@ -186,6 +191,20 @@ void make_submat_type(MPI_Datatype* types, const ScattervParam* aMatDisctrib, co
 	}
 }
 
+void printTimeProcesses(double timeStart, double timeEnd, int rank){
+	double localTime = timeEnd - timeStart;
+	double globalTime;
+
+	MPI_Reduce(&localTime, &globalTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+	
+	printf("Process #%d works for %f sec.\n", rank, localTime);
+	MPI_Barrier(MPI_COMM_WORLD);
+	if(rank == 0){
+		printf("---------------------------\nTotal program calculating time: %f\n---------------------------\n", 
+			globalTime);
+	}
+}
+
 void assignRootSubmat(double* CFull, const Matrix* CMat){
 	for(int j = 0; j < CMat->ySize; ++j){
 		for(int i = 0; i < CMat->xSize; ++i){
@@ -218,7 +237,9 @@ int main(int argc, char** argv) {
 		enter_matrix(AFull, N2, "AMat.txt");
 		enter_matrix(BFull, N3, "BMat.txt");
 	}
-	
+	timeStart = MPI_Wtime();
+
+
 	// Создание топологии процессов - декартова решетка
 	// Если не были введены размеры решетки, то подбираются два наименее отличных
 	// числа, в произведении дающие число процессов
@@ -237,7 +258,9 @@ int main(int argc, char** argv) {
 
 	int rankCart; //ранг каждого процесса в коммуникаторе декартовой решетки
 	MPI_Comm cartComm; 
-	init_cart(xSizeCart, ySizeCart, size, &cartComm); //функция, непосредственно создающая топологию
+
+	init_cart(xSizeCart, ySizeCart, size, &cartComm); //функция, непосредственно создающая топологию.
+	printf("%d %ld\n", cartComm, ySizeCart);
 	MPI_Comm_rank(cartComm, &rankCart);
 
 	//Создание коммуникатора объединяющего процессы, находящиеся в одной строке и в одном столбце
@@ -322,7 +345,6 @@ if(rankWorld == 0){
 	//  broadcast в пределах коммуникатора своего столбца и строки соответсвенно
 	MPI_Bcast(BMat.data, bMatScatterv.size[myCardCoords[0]], ColBTypePart, 0, myColComm);
 	MPI_Bcast(AMat.data, aMatScatterv.size[myCardCoords[1]], RowAType, 0, myRowComm);
-
 /*
 	if(myCardCoords[0] == 0 && myCardCoords[1] == 3){
 		printf("x: %d, y: %d\n", BMat.xSize, AMat.ySize);
@@ -377,9 +399,12 @@ if(rankWorld == 0){
 	    /*
 	    for(int i = 0; i < xSizeCart; ++i){
 	    	for(int j = 0; j < ySizeCart; ++j){
-	    		if(MPI_Recv(CFull, 1, SubmatTypes[j*xSizeCart+i], j*xSizeCart+i, MPI_ANY, MPI_COMM_WORLD, &status) != MPI_SUCCESS){
-	    			printf("Error while MPI_Recv() from %d to left upper process.\n", status.MPI_SOURCE);
-	    		}
+	    		if(i != 0 && j != 0){
+	    			printf()
+		    		if(MPI_Recv(CFull, 1, SubmatTypes[j*xSizeCart+i], j*xSizeCart+i, MPI_ANY_TAG, MPI_COMM_WORLD, &status) != MPI_SUCCESS){
+		    			printf("Error while MPI_Recv() from %d to left upper process.\n", status.MPI_SOURCE);
+		    		}
+		    	}
 	    	}
 	    }*/
     } else {
@@ -392,16 +417,14 @@ if(rankWorld == 0){
 		}
     }
 
+    timeEnd = MPI_Wtime();
+    printTimeProcesses(timeStart, timeEnd, rankWorld);
 
     if(rankWorld == 0){
     	write_matrix(CFull, N3, N1, "CMat.txt");
     }
-/*
 
 //Освобождение ресурсов
-	MPI_Type_free(&RowAType);
-	MPI_Type_free(&ColBType);
-	//MPI_Type_free(&SubMatType);
 
 	free(AMat.data);
 	free(BMat.data);
@@ -416,7 +439,7 @@ if(rankWorld == 0){
 		free(BFull);
 		free(CFull);
 	}
-*/
+
 	if (MPI_Finalize() == MPI_ERRORS_RETURN) {
 		printf("Error occurred in %d process while MPI_Finalize()\n", rankWorld);
 	}
