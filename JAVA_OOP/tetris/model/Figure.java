@@ -65,11 +65,10 @@ public enum Figure {
     private final FigureDescriptor descriptor;
     Figure(FigureParams params){
         this.params = params;
-        descriptor = new FigureDescriptor();
+        descriptor = new FigureDescriptor(this);
     }
 
-    public void newFigure(int myNum){
-        params.setOrdinal(myNum);
+    public void refresh(){
         params.refresh();
     }
 
@@ -83,32 +82,52 @@ public enum Figure {
      *               <br>2 - figure width             : byte
      *               <br>3 - figure pos x             : int
      *               <br>4 - figure pos y             : int
-     *               <br>5 - figure ordinal           : int
+     *               <br>5 - figure all conditions    : int
      */
+
+    public enum FigureParam {
+        condition,
+        length,
+        width,
+        posX,
+        posY,
+        allConditions
+    }
+
     public void getRepresentationParams(Object[] buffer) {
         if(buffer.length < 6){
             buffer = new Object[6];
         }
-        buffer[0] = params.getCondition().clone();
+        buffer[FigureParam.condition.ordinal()] = params.getCondition();
+        buffer[FigureParam.length.ordinal()] = params.getLength();
+        buffer[FigureParam.width.ordinal()] = params.getWidth();
+        buffer[FigureParam.posX.ordinal()] = params.getPosX();
+        buffer[FigureParam.posY.ordinal()] = params.getPosY();
+        buffer[FigureParam.allConditions.ordinal()] = params.getAllConditions();
+    }
+    public void getVolatileParams(Object[] buffer) {
+        if(buffer.length < 5){
+            buffer = new Object[5];
+        }
+        buffer[0] = params.getCondition();
         buffer[1] = params.getLength();
         buffer[2] = params.getWidth();
         buffer[3] = params.getPosX();
         buffer[4] = params.getPosY();
-        buffer[5] = params.getOrdinal();
     }
 
     public FigureDescriptor getDescriptor(){
-        descriptor.setFigureDescriptorBy(this);
+        descriptor.renew(this);
         return descriptor;
     }
 
-    public void addFigureToField(GameField gf) throws FigureAddingToFieldException {
+    public void addFigureToField(GameField gf, int color) throws FigureAddingToFieldException {
         byte[] view = params.getCondition();
         try {
             for (int i = 0; i < params.getLength(); i++) {
                 for (int j = 0; j < params.getWidth(); ++j) {
                     if (view[i * params.getWidth() + j] == 1) {
-                        gf.assignValueToPosition(params.getOrdinal(), params.getPosX() + j, params.getPosY() + i);
+                        gf.assignValueToPosition(color, params.getPosX() + j, params.getPosY() + i);
                     }
                 }
             }
@@ -148,11 +167,9 @@ public enum Figure {
                     }
                 }
             }
-        } catch (IndexOutOfField e){
-            System.out.println("INDEX OUT OF BOUNDS");
+        } catch (IndexOutOfField | DimensionOutOfField e){
             throw new ImpossibleToRotateFigure();
         }
-
         params.setPosX(newPosX);
         params.setPosY(newPosY);
         params.setNextCondition();
@@ -166,7 +183,7 @@ public enum Figure {
             } else {
                 throw new ImpossibleToMoveFigureRight();
             }
-        } catch (IndexOutOfField e) {
+        } catch (IndexOutOfField | DimensionOutOfField e) {
             throw new ImpossibleToMoveFigureRight();
         }
     }
@@ -179,7 +196,7 @@ public enum Figure {
             } else {
                 throw new ImpossibleToMoveFigureLeft();
             }
-        } catch (IndexOutOfField e){
+        } catch (IndexOutOfField | DimensionOutOfField e){
             System.out.println("NO MOVE LEFT");
             throw new ImpossibleToMoveFigureLeft();
         }
@@ -191,6 +208,10 @@ public enum Figure {
         } else {
             throw new ImpossibleToMoveFigureDown();
         }
+    }
+
+    public boolean doesntFitOnField(){
+        return (params.getPosY() == 0) && (params.getLength() > 1);
     }
 
     private boolean isFigureFell(GameField gf) {
@@ -221,14 +242,14 @@ public enum Figure {
                     }
                 }
             }
-        } catch (IndexOutOfField e){
+        } catch (IndexOutOfField | DimensionOutOfField e){
             System.out.println(e.getMessage());
         }
 
         return false;
     }
 
-    private boolean isFreeOnDirection(Direction direction, GameField gf) throws IndexOutOfField {
+    private boolean isFreeOnDirection(Direction direction, GameField gf) throws IndexOutOfField, DimensionOutOfField {
         int xPos = params.getPosX();
         int yPos = params.getPosY();
         int length = params.getLength();
