@@ -1,10 +1,11 @@
 package model.figure;
 
+import java.util.Arrays;
+
 public class FigureParams {
     private volatile int posXPointer;        // текущая позиция. Указывает на левый верхний угол
     private volatile int posYPointer;        // фигуры
     private volatile byte currentCondition;  // текущее состояние
-    private volatile int ordinal;
 
     private final byte maximCondition;
     private final byte[][] pointerShiftByChangingCondition;
@@ -23,6 +24,13 @@ public class FigureParams {
 
     public int getPosX(){ return posXPointer; }
     public int getPosY(){ return posYPointer; }
+    public byte[][] getAllConditions() {
+        byte[][] copyOfAllConditions = new byte[maximCondition][];
+        for(int i = 0; i < conditions.length; ++i){
+            copyOfAllConditions[i] = conditions[i].clone();
+        }
+        return copyOfAllConditions;
+    }
     public byte[] getCondition() { return conditions[currentCondition].clone(); }
     public byte[] getNextCondition() { return conditions[getNextPosNum()]; }
     public byte getNewWidth() { return size[getNextPosNum()][1]; }
@@ -30,19 +38,9 @@ public class FigureParams {
     public byte getLength() { return size[currentCondition][1]; }
     public byte getWidth() { return size[currentCondition][0]; }
     public byte[] getPointerShiftToNextPos() { return pointerShiftByChangingCondition[getNextPosNum()]; }
-    public int[] getNextConditionPos() {
-        int nextCond = ((currentCondition + 1) % maximCondition);
-        return new int[]{posXPointer+pointerShiftByChangingCondition[nextCond][0], posYPointer+pointerShiftByChangingCondition[nextCond][1]};
-    }
-    public int getOrdinal() {
-        return ordinal;
-    }
-
     public synchronized void setNextCondition() { currentCondition = (byte) ((currentCondition + 1) % maximCondition); }
     public void setPosX(int pos){ posXPointer = pos; }
     public void setPosY(int pos){ posYPointer = pos; }
-    public void setOrdinal(int o){ ordinal = o; }
-
     public void refresh(){
         posXPointer = 5;
         posYPointer = 0;
