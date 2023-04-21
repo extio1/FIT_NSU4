@@ -1,22 +1,41 @@
+package main;
+
+import com.googlecode.lanterna.screen.Screen;
+import com.googlecode.lanterna.terminal.Terminal;
+import controller.CommandTetris;
 import controller.Controller;
 import controller.TetrisController;
 
 import model.Tetris;
+import com.googlecode.lanterna.*;
 
+import viewer.View;
+import viewer.cui.ConsoleUI;
 import viewer.gui.GraphicUI;
-
 
 public class Main {
     public static void main(String[] args) throws InterruptedException {
-        int WIDTH_SIZE_GAME_FIELD = 10;
-        int LENGTH_SIZE_GAME_FIELD = 20;
-
         Tetris game = new Tetris();
         Controller controller = new TetrisController(game);
-        GraphicUI ui = new GraphicUI(WIDTH_SIZE_GAME_FIELD, LENGTH_SIZE_GAME_FIELD, controller, game);
+        View ui = null;
+
+        StartBy start = StartBy.CONSOLE;
+        switch(start){
+            case CONSOLE -> ui = new ConsoleUI(controller, game);
+            case SWING -> ui = new GraphicUI(controller, game);
+        }
+
         game.attach(ui);
+        while (ui.getState() != Thread.State.WAITING || game.getState() != Thread.State.WAITING) {
+            Thread.sleep(500);
+        }
 
-        game.turnOn();
+        controller.execute(CommandTetris.Launch);
+    }
 
+
+    private enum StartBy{
+        CONSOLE,
+        SWING
     }
 }
