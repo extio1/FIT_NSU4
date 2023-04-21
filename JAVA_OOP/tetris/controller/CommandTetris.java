@@ -6,8 +6,10 @@ public enum CommandTetris {
     Left,
     Right,
     HighScores,
-    NewGame,
+    NewGamePrepare,
+    Launch,
     About,
-    Menu,
+    Pause,
+    Resume,
     Exit
 }
