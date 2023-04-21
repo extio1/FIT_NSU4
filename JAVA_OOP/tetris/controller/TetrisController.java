@@ -1,12 +1,9 @@
 package controller;
 
-import tetrisModel.Tetris;
-
-import static controller.CommandTetris.Left;
-import static controller.CommandTetris.Right;
+import model.Tetris;
 
 public class TetrisController implements Controller{
-    Tetris myModel = null;
+    Tetris myModel;
 
     public TetrisController(Tetris _Tetris){
         myModel = _Tetris;
@@ -20,8 +17,11 @@ public class TetrisController implements Controller{
             case Up -> myModel.up();
             case Down -> myModel.down();
             case Exit -> myModel.exit();
-            case NewGame -> myModel.newGame();
+            case Pause -> myModel.pauseGame();
+            case NewGamePrepare -> myModel.newGame();
+            case Launch -> myModel.launch();
             case HighScores -> myModel.highScores();
+            case Resume -> myModel.continueGame();
             case About -> myModel.about();
         }
     }
