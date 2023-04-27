@@ -5,15 +5,15 @@ import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class Provider {
+public class Provider <T> {
     private volatile int period; //period in ms
     private int counterProduct = 0;
     ManufacturingProcess manufacturingProcess;
     Timer timer;
 
-    Storage<? super Product> storage;
+    Storage<T> storage;
 
-    public Provider(int period, Class<? extends Product> providingProduct, Storage<? super Product> storage){
+    public Provider(int period, Class<? extends Product> providingProduct, Storage<T> storage){
         this.period = period;
         this.storage = storage;
         timer = new Timer(this.getClass().toString());
@@ -35,7 +35,7 @@ public class Provider {
         public void run() {
             try {
                 Class<?> productClass = Class.forName(productType);
-                Product product = (Product) productClass.getConstructor(int.class).newInstance(counterProduct);
+                T product = (T) productClass.getConstructor(int.class).newInstance(counterProduct);
                 storage.pushComponent(product);
                 ++counterProduct;
             } catch (ClassNotFoundException | InvocationTargetException | InstantiationException |
