@@ -21,12 +21,18 @@ public class Factory {
 
     PoolExecutor workers;
 
-    Provider engineProvider;
-    Provider bodyProvider;
-    Provider[] accessoryProvider;
+    Provider<Engine> engineProvider;
+    Provider<Body> bodyProvider;
+    Provider<Accessory>[] accessoryProvider;
 
     public Factory(){
-        readConfigFile("recourses/config.properties");
+        this("recourses/config.properties");
+
+    }
+
+    public Factory(String configPath){
+        readConfigFile(configPath);
+
         carStorage = new SingleSpeciesStorage<>(configurationInfo.storageAutoSize());
         bodyStorage = new SingleSpeciesStorage<>(configurationInfo.storageBodySize());
         engineStorage = new SingleSpeciesStorage<>(configurationInfo.storageMotorSize());
@@ -34,11 +40,12 @@ public class Factory {
 
         workers = new PoolExecutor(configurationInfo.workers());
 
-        engineProvider = new Provider(configurationInfo.engineDelay(), Engine.class, engineStorage);
-        bodyProvider = new Provider(configurationInfo.bodyDelay(), Body.class, bodyStorage);
+        engineProvider = new Provider<>(configurationInfo.engineDelay(), Engine.class, engineStorage);
+        bodyProvider = new Provider<>(configurationInfo.bodyDelay(), Body.class, bodyStorage);
         accessoryProvider = new Provider[configurationInfo.accessorySuppliers()];
         for(int i = 0; i < configurationInfo.accessorySuppliers(); ++i)
-            accessoryProvider[i] = new Provider(configurationInfo.accessorySuppliers(), Accessory.class, accessoryStorage);
+            accessoryProvider[i] = new Provider<>(configurationInfo.accessorySuppliers(), Accessory.class, accessoryStorage);
+
     }
 
     private void readConfigFile(String path)  {
