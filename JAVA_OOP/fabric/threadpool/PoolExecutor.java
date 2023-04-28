@@ -1,6 +1,7 @@
 package threadpool;
 
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.Executor;
@@ -22,6 +23,10 @@ public class PoolExecutor implements Executor {
         }
 
         tasks.add(command);
+    }
+
+    public void quit(){
+        Arrays.stream(workers).forEach(Thread::interrupt);
     }
 
     private class Worker extends Thread{
