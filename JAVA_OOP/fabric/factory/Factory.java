@@ -4,6 +4,8 @@ import factory.product.Accessory;
 import factory.product.Car;
 import factory.product.Engine;
 import factory.product.Body;
+import factory.provision.Provider;
+import factory.provision.ProviderPool;
 import factory.storage.SingleSpeciesStorage;
 import threadpool.PoolExecutor;
 
@@ -23,11 +25,10 @@ public class Factory {
 
     Provider<Engine> engineProvider;
     Provider<Body> bodyProvider;
-    Provider<Accessory>[] accessoryProvider;
+    ProviderPool<Accessory> accessoryProvider;
 
     public Factory(){
         this("recourses/config.properties");
-
     }
 
     public Factory(String configPath){
@@ -42,10 +43,8 @@ public class Factory {
 
         engineProvider = new Provider<>(configurationInfo.engineDelay(), Engine.class, engineStorage);
         bodyProvider = new Provider<>(configurationInfo.bodyDelay(), Body.class, bodyStorage);
-        accessoryProvider = new Provider[configurationInfo.accessorySuppliers()];
-        for(int i = 0; i < configurationInfo.accessorySuppliers(); ++i)
-            accessoryProvider[i] = new Provider<>(configurationInfo.accessorySuppliers(), Accessory.class, accessoryStorage);
-
+        accessoryProvider = new ProviderPool<>(configurationInfo.accessorySuppliers(), configurationInfo.accessoryDelay(),
+                                                Accessory.class, accessoryStorage);
     }
 
     private void readConfigFile(String path)  {
