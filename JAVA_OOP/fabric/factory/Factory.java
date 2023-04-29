@@ -1,12 +1,15 @@
 package factory;
 
+import factory.carStorageController.CarStorageController;
+import factory.dealer.DealerSet;
 import factory.product.Accessory;
 import factory.product.Car;
 import factory.product.Engine;
 import factory.product.Body;
 import factory.provision.Provider;
-import factory.provision.ProviderPool;
+import factory.provision.ProviderSet;
 import factory.storage.SingleSpeciesStorage;
+import factory.job.CreateCar;
 import threadpool.PoolExecutor;
 
 import java.io.FileInputStream;
@@ -21,11 +24,15 @@ public class Factory {
     Storage<Engine> engineStorage;
     Storage<Accessory> accessoryStorage;
 
+    CarStorageController carStorageController;
+
     PoolExecutor workers;
 
     Provider<Engine> engineProvider;
     Provider<Body> bodyProvider;
-    ProviderPool<Accessory> accessoryProvider;
+    ProviderSet<Accessory> accessoryProvider;
+
+    DealerSet dealerSet;
 
     public Factory(){
         this("recourses/config.properties");
@@ -38,13 +45,34 @@ public class Factory {
         bodyStorage = new SingleSpeciesStorage<>(configurationInfo.storageBodySize());
         engineStorage = new SingleSpeciesStorage<>(configurationInfo.storageMotorSize());
         accessoryStorage = new SingleSpeciesStorage<>(configurationInfo.storageAccessorySize());
+        CreateCar.setStorages(engineStorage, bodyStorage, accessoryStorage, carStorage);
 
         workers = new PoolExecutor(configurationInfo.workers());
 
-        engineProvider = new Provider<>(configurationInfo.engineDelay(), Engine.class, engineStorage);
-        bodyProvider = new Provider<>(configurationInfo.bodyDelay(), Body.class, bodyStorage);
-        accessoryProvider = new ProviderPool<>(configurationInfo.accessorySuppliers(), configurationInfo.accessoryDelay(),
-                                                Accessory.class, accessoryStorage);
+        carStorageController = new CarStorageController(carStorage, workers);
+
+        engineProvider = new Provider<>(configurationInfo.engineDelay(), Engine.class, engineStorage, 0);
+        bodyProvider = new Provider<>(configurationInfo.bodyDelay(), Body.class, bodyStorage, 0);
+        accessoryProvider = new ProviderSet<>(configurationInfo.accessorySuppliers(), configurationInfo.accessoryDelay(),
+                                               Accessory.class, accessoryStorage);
+
+        dealerSet = new DealerSet(configurationInfo.dealers(), configurationInfo.dealerDelay, carStorage);
+    }
+
+    public void startFabric(){
+        engineProvider.startPerform();
+        bodyProvider.startPerform();
+        accessoryProvider.startPerformSet();
+        dealerSet.startPerformSet();
+        carStorageController.start();
+    }
+
+    public void closeFabric(){
+        engineProvider.stopPerform();
+        bodyProvider.stopPerform();
+        accessoryProvider.stopPerformSet();
+        dealerSet.stopPerformSet();
+        carStorageController.interrupt();
     }
 
     private void readConfigFile(String path)  {
@@ -59,15 +87,16 @@ public class Factory {
             int accessorySuppliers = Integer.parseInt(properties.getProperty("n_accessory_suppliers"));
             int workers = Integer.parseInt(properties.getProperty("n_workers"));
             int dealers = Integer.parseInt(properties.getProperty("n_dealers"));
-            int engineDelay = Integer.parseInt(properties.getProperty("engine_dealer_default_delay"));
-            int accessoryDelay = Integer.parseInt(properties.getProperty("accessory_dealer_default_delay"));
-            int bodyDelay = Integer.parseInt(properties.getProperty("body_dealer_default_delay"));
+            int engineDelay = Integer.parseInt(properties.getProperty("engine_provider_default_delay"));
+            int accessoryDelay = Integer.parseInt(properties.getProperty("accessory_provider_default_delay"));
+            int bodyDelay = Integer.parseInt(properties.getProperty("body_provider_default_delay"));
+            int dealerDelay = Integer.parseInt(properties.getProperty("dealer_default_delay"));
             boolean log = Boolean.parseBoolean(properties.getProperty("log"));
 
             configurationInfo = new ConfigurationInfo(
                     storageBodySize, storageMotorSize, storageAccessorySize, storageAutoSize,
                     accessorySuppliers, workers, dealers,
-                    engineDelay, accessoryDelay, bodyDelay,
+                    engineDelay, accessoryDelay, bodyDelay, dealerDelay,
                     log
             );
 
@@ -89,6 +118,8 @@ public class Factory {
             int engineDelay,
             int accessoryDelay,
             int bodyDelay,
+            int dealerDelay,
+
             boolean log
     ){}
 }
