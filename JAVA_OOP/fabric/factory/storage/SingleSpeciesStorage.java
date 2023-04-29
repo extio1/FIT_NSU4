@@ -4,8 +4,8 @@ import factory.Storage;
 
 import java.util.LinkedList;
 
-public class SingleSpeciesStorage<T> implements Storage<T> {
-    private final LinkedList<T> store = new LinkedList<>();
+public class SingleSpeciesStorage<E> implements Storage<E> {
+    private final LinkedList<E> store = new LinkedList<>();
     private final int capacity;
 
     public SingleSpeciesStorage(int capacity) {
@@ -13,22 +13,36 @@ public class SingleSpeciesStorage<T> implements Storage<T> {
     }
 
     @Override
-    synchronized public T getComponent() throws InterruptedException {
-        if(store.isEmpty()){
-            this.wait();
+    synchronized public E getComponent(){
+        while(store.isEmpty()){
+            try {
+                this.wait();
+            } catch (InterruptedException e){
+                e.printStackTrace();
+            }
         }
-        T component = store.pop();
-        this.notify();
+
+        E component = store.pop();
+        this.notifyAll();
         return component;
     }
 
     @Override
-    synchronized public void pushComponent(T component) throws InterruptedException {
-        if(store.size() >= capacity){
-            this.wait();
+    synchronized public void pushComponent(E component) {
+        while(store.size() >= capacity){
+            try {
+                this.wait();
+            } catch (InterruptedException e){
+                e.printStackTrace();
+            }
         }
+
         store.add(component);
-        this.notify();
+        this.notifyAll();
+    }
+
+    @Override
+    public int getCapacity(){
+        return capacity;
     }
 }
-    
