@@ -1,30 +1,33 @@
 package factory.provision;
 
-import factory.Product;
-import factory.Storage;
-import factory.product.Accessory;
+import factory.*;
 
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.List;
 
-public class ProviderPool <T extends Product>{
-    private final ArrayList<Provider<T>> providerList;
+public class ProviderSet <T extends Product> implements InteractivePerformerSet {
+    private final List<Provider<T>> providerList;
 
-    public ProviderPool(int nProviders, int period, Class<? extends Product> providingProduct, Storage<T> storage){
-        providerList = new ArrayList<>(nProviders);
-        for(int i = 0; i < nProviders; ++i)
-            providerList.set(i, new Provider<T>(period, providingProduct, storage));
+    public ProviderSet(int nProviders, int period, Class<? extends Product> providingProduct, Storage<T> storage){
+        providerList = new ArrayList<>();
+        for(int i = 0; i < nProviders; ++i) {
+            providerList.add(new Provider<T>(period, providingProduct, storage, i));
+        }
     }
 
-    public void startSupplies(){
-        providerList.forEach(Provider::startSupplies);
+    @Override
+    public void startPerformSet(){
+        providerList.forEach(Provider::startPerform);
     }
 
-    public void stopSupplies(){
-        providerList.forEach(Provider::stopSupplies);
+    @Override
+    public void stopPerformSet(){
+        providerList.forEach(Provider::stopPerform);
     }
 
-    public void changePeriod(int newPeriod) {
+    @Override
+    public void changePeriodSet(int newPeriod) {
         providerList.forEach((e)->e.changePeriod(newPeriod));
     }
+
 }
