@@ -1,6 +1,7 @@
 package factory;
 
-public interface Storage <T>{
-    T getComponent() throws InterruptedException;
-    void pushComponent(T component) throws InterruptedException;
+public interface Storage <E>{
+    E getComponent();
+    void pushComponent(E component);
+    int getCapacity();
 }
