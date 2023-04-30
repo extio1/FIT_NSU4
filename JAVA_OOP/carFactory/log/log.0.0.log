@@ -1,0 +1,94 @@
+Apr 30, 2023 1:01:51 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [32m Product factory.product.Body<ID=1> was created. [0m
+Apr 30, 2023 1:01:51 PM factory.dealer.Dealer$Task doTask
+INFO: New car was bought. Dealer 0: Auto1(Body:1, Motor:1, Accessory:5)
+Apr 30, 2023 1:01:51 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=5> was created. [0m
+Apr 30, 2023 1:01:51 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=4> was created. [0m
+Apr 30, 2023 1:01:51 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [95m Product factory.product.Engine<ID=1> was created. [0m
+Apr 30, 2023 1:01:51 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=3> was created. [0m
+Apr 30, 2023 1:01:51 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=2> was created. [0m
+Apr 30, 2023 1:01:51 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=1> was created. [0m
+Apr 30, 2023 1:01:52 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [32m Product factory.product.Body<ID=2> was created. [0m
+Apr 30, 2023 1:01:52 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=6> was created. [0m
+Apr 30, 2023 1:01:52 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=7> was created. [0m
+Apr 30, 2023 1:01:52 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [95m Product factory.product.Engine<ID=2> was created. [0m
+Apr 30, 2023 1:01:52 PM factory.dealer.Dealer$Task doTask
+INFO: New car was bought. Dealer 0: Auto2(Body:2, Motor:2, Accessory:7)
+Apr 30, 2023 1:01:52 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=8> was created. [0m
+Apr 30, 2023 1:01:52 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=9> was created. [0m
+Apr 30, 2023 1:01:52 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=10> was created. [0m
+Apr 30, 2023 1:01:53 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [32m Product factory.product.Body<ID=3> was created. [0m
+Apr 30, 2023 1:01:53 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=11> was created. [0m
+Apr 30, 2023 1:01:53 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=12> was created. [0m
+Apr 30, 2023 1:01:53 PM factory.dealer.Dealer$Task doTask
+INFO: New car was bought. Dealer 4: Auto3(Body:3, Motor:3, Accessory:12)
+Apr 30, 2023 1:01:53 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [95m Product factory.product.Engine<ID=3> was created. [0m
+Apr 30, 2023 1:01:53 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=13> was created. [0m
+Apr 30, 2023 1:01:54 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [32m Product factory.product.Body<ID=4> was created. [0m
+Apr 30, 2023 1:01:54 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [95m Product factory.product.Engine<ID=4> was created. [0m
+Apr 30, 2023 1:01:54 PM factory.dealer.Dealer$Task doTask
+INFO: New car was bought. Dealer 4: Auto4(Body:4, Motor:4, Accessory:17)
+Apr 30, 2023 1:01:54 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=17> was created. [0m
+Apr 30, 2023 1:01:55 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [32m Product factory.product.Body<ID=5> was created. [0m
+Apr 30, 2023 1:01:55 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [95m Product factory.product.Engine<ID=5> was created. [0m
+Apr 30, 2023 1:01:55 PM factory.dealer.Dealer$Task doTask
+INFO: New car was bought. Dealer 0: Auto5(Body:5, Motor:5, Accessory:18)
+Apr 30, 2023 1:01:55 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=18> was created. [0m
+Apr 30, 2023 1:01:56 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [32m Product factory.product.Body<ID=6> was created. [0m
+Apr 30, 2023 1:01:56 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [95m Product factory.product.Engine<ID=6> was created. [0m
+Apr 30, 2023 1:01:56 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=19> was created. [0m
+Apr 30, 2023 1:01:56 PM factory.dealer.Dealer$Task doTask
+INFO: New car was bought. Dealer 4: Auto6(Body:6, Motor:6, Accessory:19)
+Apr 30, 2023 1:01:57 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [32m Product factory.product.Body<ID=7> was created. [0m
+Apr 30, 2023 1:01:57 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [95m Product factory.product.Engine<ID=7> was created. [0m
+Apr 30, 2023 1:01:57 PM factory.dealer.Dealer$Task doTask
+INFO: New car was bought. Dealer 0: Auto7(Body:7, Motor:7, Accessory:20)
+Apr 30, 2023 1:01:57 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=20> was created. [0m
+Apr 30, 2023 1:01:58 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [32m Product factory.product.Body<ID=8> was created. [0m
+Apr 30, 2023 1:01:58 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [95m Product factory.product.Engine<ID=8> was created. [0m
+Apr 30, 2023 1:01:58 PM factory.dealer.Dealer$Task doTask
+INFO: New car was bought. Dealer 4: Auto8(Body:8, Motor:8, Accessory:21)
+Apr 30, 2023 1:01:58 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=21> was created. [0m
+Apr 30, 2023 1:01:59 PM factory.Factory closeFabric
+INFO: FABRIC CLOSED
+Apr 30, 2023 1:01:59 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=22> was created. [0m
+Apr 30, 2023 1:01:59 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=22> was created. [0m
+Apr 30, 2023 1:01:59 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=22> was created. [0m
+Apr 30, 2023 1:01:59 PM factory.provision.Provider$ManufacturingProcess doCreation
+INFO: [34m Product factory.product.Accessory<ID=22> was created. [0m
