@@ -23,7 +23,7 @@
 
 size_t NODE_DESC_SIZE = sizeof(struct node);*/
 
-typedef struct head_descriptor{
+typedef struct heap_descriptor{
 	void* start_heap_data;
 	void* end_heap_nodes;
 	size_t heap_size; 
