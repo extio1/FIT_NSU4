@@ -9,201 +9,172 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 
-#define PAGE_SIZE 4096
-#define ASGN_IFNN(dest, val) if(dest!=NULL) dest=val
+#include "free_tree.h"
+
+#define PAGE_SIZE getpagesize()
+#define INIT_HEAP_DATA_SIZE PAGE_SIZE*2
+#define INIT_HEAP_NODES_SIZE PAGE_SIZE
+
+/*#define ASGN_IFNN(dest, val) if(dest!=NULL) dest=val
 #define ASGN_IFNN_TOFLD(dest, fld, val) if(dest!=NULL) dest->fld=val
 #define ADD_BYTES(to, n) (char*)to+n
 #define AFTER(thing) thing+sizeof(thing)
 #define ADD_BYTES_AFTER(thing, n) (char*)(thing)+sizeof(*thing)+n
 
-typedef struct node{
-	uint64_t size;
-	struct node* bigger;
-	struct node* smaller;
-	bool free;
-} Node;
+size_t NODE_DESC_SIZE = sizeof(struct node);*/
 
-size_t NODE_DESC_SIZE = sizeof(struct node);
-void* heap_start;
+typedef struct head_descriptor{
+	void* start_heap_data;
+	void* end_heap_nodes;
+	size_t heap_size; 
+} HeapD;
 
-Node* first_node;
-Node* last_node;
+HeapD heapd;
 
-int init_heap(const size_t npages){
-	int heapfd = open("heap_data", O_RDWR | O_CREAT, S_IRWXU | S_IRWXO | S_IRWXG);
-
-	if( heapfd != -1 ){
-		uint64_t heap_size = npages*PAGE_SIZE;
-
-		if( lseek(heapfd, heap_size, SEEK_SET) == -1 ){
-			perror("Error while establishing file size");
-			return -1;
-		}
-
-		if( write(heapfd, "", 1) == -1 ) {
-			perror("Error while establishing file size");
-			return -1;
-		}
-
-		void** ptr_to_begin = mmap(NULL, heap_size, PROT_READ | PROT_WRITE,
-					MAP_SHARED, heapfd, 0);
-
-		if( ptr_to_begin == MAP_FAILED ){
-			perror("Error while mmap()");
-			return -1;
-		}
-
-		memset(ptr_to_begin, 0xCC, heap_size);
-		heap_start = ptr_to_begin;
-		first_node = (Node*) ptr_to_begin;
-
-		//(*ptr_to_begin) = (void*) first_node;
-		first_node->free=true;
-		first_node->size = heap_size-sizeof(Node);
-		first_node->smaller = NULL;
-		first_node->bigger = NULL;
-
-		return 0;
-	} else {
+int find_place_between_heap_and_other(){
+	FILE* map = fopen("/proc/self/maps", "r");
+	if(map == NULL){
+		perror("Error while opening /proc/self/maps\n");
 		return -1;
 	}
 
-}
+	size_t size_buff = 1024;
+	const int sizeof_ptr_in_maps = 12;
+	char* map_str = malloc(sizeof(char)*size_buff);
+	char* tmp_char = malloc(sizeof(char)*size_buff);
+	char* tmp_char_stable = tmp_char;
 
-Node* create_new_node(const void* at, const size_t new_size,
-		     Node* new_smaller, Node* new_bigger)
-{
-	Node* new_node = (Node*) at;
-	new_node->size = new_size;
-	new_node->bigger = new_bigger;
-	new_node->smaller = new_smaller;
-	new_node->free = true;
+	unsigned long long page_begin;
+	unsigned long long page_end;
 
-	return new_node;
-}
+	int previos_was_heap = 0;
+	while(getline(&map_str, &size_buff, map) != -1){
+		page_begin = strtoll(map_str, NULL, 16);
+		tmp_char = strtok(map_str, " ");
+		page_begin = strtoll(tmp_char, NULL, 16);
+		page_end = strtoll(tmp_char+sizeof_ptr_in_maps+1, NULL, 16);
+		for(int i = 0; i < 5; ++i){
+			tmp_char = strtok(NULL, " ");
+		}
 
-//возвращает указатель на структуру, которая описывает свободный регион
-Node* find_free_node(const size_t required_size){
-	Node* node = first_node;
-	while(node != NULL && (node->size < required_size || (node->free==false))){
-		node = node->bigger;
+		if(previos_was_heap){
+	   		heapd.end_heap_nodes = (void*) page_begin;
+			previos_was_heap = 0;
+		}	
+		if(strcmp(tmp_char, "[heap]\n") == 0){
+	   		heapd.start_heap_data = (void*) page_end;
+	   		previos_was_heap = 1; 
+		}
 	}
-	return node;
+
+	fclose(map);
+	free(tmp_char_stable);
+	free(map_str);
+}
+
+int init_heap(){
+	int data_heapfd = open("heap_data",  O_RDWR | O_CREAT, S_IRWXU | S_IRWXO | S_IRWXG);
+	int nodes_heapfd = open("heap_nodes", O_RDWR | O_CREAT, S_IRWXU | S_IRWXO | S_IRWXG);
+
+	if( data_heapfd != -1 && nodes_heapfd != -1){
+		if( find_place_between_heap_and_other() == -1 ){
+			perror("Error while initializing heap: find_place_between_heap_and_other().\n");
+			return 100;
+		} 
+
+		//establish file sizes
+		if( lseek(data_heapfd, INIT_HEAP_DATA_SIZE, SEEK_SET) == -1 ){
+			perror("Error while establishing file size");
+			return 101;
+		}
+		if( write(data_heapfd, "", 1) == -1 ) {
+			perror("Error while establishing file size");
+			return 102;
+		}
+		if( lseek(nodes_heapfd, INIT_HEAP_NODES_SIZE, SEEK_SET) == -1 ){
+			perror("Error while establishing file size");
+			return 101;
+		}
+		if( write(nodes_heapfd, "", 1) == -1 ) {
+			perror("Error while establishing file size");
+			return 102;
+		}
+
+		void* data_begin = mmap(heapd.start_heap_data, INIT_HEAP_DATA_SIZE, PROT_READ | PROT_WRITE,
+							    MAP_SHARED, data_heapfd, 0);
+
+		void* nodes_begin = mmap(heapd.end_heap_nodes-INIT_HEAP_NODES_SIZE, INIT_HEAP_NODES_SIZE, 
+							   PROT_READ | PROT_WRITE, MAP_SHARED, nodes_heapfd, 0);
+
+		if( data_begin == MAP_FAILED || nodes_begin == MAP_FAILED){
+			perror("Error while mmap()");
+			return 200;
+		}
+		memset(heapd.start_heap_data, 0xFF, INIT_HEAP_DATA_SIZE);
+		memset(heapd.end_heap_nodes-INIT_HEAP_NODES_SIZE, 0xFF, INIT_HEAP_NODES_SIZE);
+
+		init_tree(INIT_HEAP_NODES_SIZE, INIT_HEAP_DATA_SIZE, heapd.end_heap_nodes, heapd.start_heap_data);
+
+		return 0;
+	} else {
+		return 1000;
+	}
+
 }
 
 void* my_malloc(const size_t size){
-	Node* free_node = find_free_node(size);
-	//printf("malloc %p new_node %p and %ld\n", free_node, ADD_BYTES_AFTER(free_node, size), sizeof(free_node));
-	if(free_node != NULL){
-		free_node->free = false;
-		printf("Size %ld %ld %ld\n", free_node->size, size, NODE_DESC_SIZE);
-		if((free_node->size-size) > NODE_DESC_SIZE){
-			Node* new_node = create_new_node(ADD_BYTES_AFTER(free_node,size),
-					 free_node->size-size-NODE_DESC_SIZE,
-					 free_node, free_node->bigger);
-
-			//printf("SIZE: %ld\n", new_node->size);
-	//		(free_node->bigger)->smaller = new_node;
-			free_node->bigger = new_node;
-//	printf("Node created %p, prev %p, next %p", new_node, new_node->smaller, new_node->bigger);
-		}
-		free_node->size = size;
-		memset((void*)free_node+NODE_DESC_SIZE, 0x11, size);
-		return (void*)free_node+NODE_DESC_SIZE;
- 	} else {
-		return NULL;
-	}
+	Node* free_node = find_node(size);
+	//Перед началом блока данных на куче записан указатель на соответсующей ему нод
+	*((Node**)(free_node->ptr_to_begin-sizeof(Node*))) = free_node;
+	reserve_node(free_node, size);
+	return free_node->ptr_to_begin;
 }
 
 void my_free(void* ptr){
-	Node* node = ptr-NODE_DESC_SIZE;
-	node->free = true;
-	Node* prev_node = node->smaller;
-	if((prev_node != NULL) && (prev_node->free == true)){
-		size_t s = prev_node->size;
-		prev_node->size += node->size;
-		prev_node->bigger = node->bigger;
-		ASGN_IFNN_TOFLD(node->bigger, smaller, prev_node);
-		memset(ptr-s, 0x00, prev_node->size);
-	} else {
-		memset(ptr, 0x00, node->size);
-	}
+	Node** node = ptr - sizeof(Node*);
+	(*node)->left_child = NULL;
+	(*node)->right_child = NULL;
+	add_node(*node);
+	//printf("++++++++++%p - %d (%p, %p)\n", *node, (*node)->size, (*node)->left_child, (*node)->right_child);
+	memset((char*)(node), 0x00, (*node)->size+sizeof(Node*));
 }
 
-void print_nodes(){
-	Node* node = first_node;
-	printf("-------------\n");
-	do {
-		printf("%p(%d) -> ", node, node->free);
-		node = node->bigger;
-	} while(node != NULL);
-printf("\n--------------\n");
-}
+
 
 int main(){
-	printf("pid: %d\n", getpid());
-	printf("Code %d\n", init_heap(2));
+	init_heap();
+/*	printf("pid: %d\n", getpid());
+	printf("Code %d\n", init_heap());
 
-	void* ptr = my_malloc(100);
-	printf("ptr : This node %p\n", ptr-NODE_DESC_SIZE);
+	printf("%p\n", heapd.start_heap_data);
+	printf("%p\n", heapd.end_heap_nodes);*/
 
 	void* ptr1 = my_malloc(100);
-	printf("ptr1: This node %p\n", ptr1-NODE_DESC_SIZE);
-
+	memset(ptr1, 0x77, 100);
+	printf("Malloc1: %p\n", ptr1);
 	void* ptr2 = my_malloc(100);
-	printf("ptr2: This node %p\n", ptr2-NODE_DESC_SIZE);
-
+	memset(ptr2, 0x77, 100);
+	printf("Malloc2: %p\n", ptr2);
 	void* ptr3 = my_malloc(100);
-	printf("ptr3: This node %p\n", ptr3-NODE_DESC_SIZE);
+	memset(ptr3, 0x77, 100);
+	printf("Malloc3: %p\n", ptr3);
 
-	print_nodes();
+	my_free(ptr2);
+	printf("free2\n");
 
-	//my_free(ptr3);
-	//printf("\nFree done ptr3\n");
-	//print_nodes();
-	my_free(ptr);
-	printf("\nFree done ptr\n");
-	print_nodes();
+	ptr2 = my_malloc(100);
+	memset(ptr2, 0x77, 100);
+	printf("Malloc2: %p\n", ptr2);
 
 	void* ptr4 = my_malloc(100);
-	printf("ptr4: This node %p\n", ptr4-NODE_DESC_SIZE);
-	print_nodes();
+	memset(ptr4, 0x77, 100);
+	printf("Malloc4: %p\n", ptr4);
 
-	void* ptr5 = my_malloc(100);
-	printf("This node %p, last node %p\n", ptr5-NODE_DESC_SIZE, last_node);
-	print_nodes();
+	my_free(ptr3);
+	printf("free3\n");
 
-	my_free(ptr);
-	print_nodes();
+	ptr3 = my_malloc(100);
+	memset(ptr3, 0x77, 100);
+	printf("Malloc3: %p\n", ptr3);
 
-//	my_free(ptr1);
-//	printf("last node %p prelast node %p\n", last_node, last_node->smaller);
-	//print_nodes();
-
-	//print_nodes();
-	//printf("-------------first_node %p\n", first_node);
-/*	//printf("ptr to new region %p\n", ptr_to_new_region);
-	printf("Another ptr to new region %p\n", my_malloc(100));
-	//printf("-------------first_node %p\n", first_node);
-	print_nodes();
-	printf("And another ptr to new region %p\n", my_malloc(100));
-	print_nodes();
-	//printf("-------------first_node %p\n", first_node);
-	printf("freed\n");
-	print_nodes();
-	//printf("-------------first_node %p\n", first_node);
-	my_free(ptr_to_new_region);
-	//printf("-------------first_node %p\n", first_node);
-	my_malloc(100);
-	print_nodes();
-	//printf("-------------first_node %p\n", first_node);
-
-
-	printf("heap start %p\n", first_node);
-	printf("size %ld\n", first_node->size);
-	//sleep(20);
-	//Free_node* node = *heap_begin;
-	//printf("%p\n", node);
-	//printf("%p\n", heapd->smallest->start);
-*/
 }
