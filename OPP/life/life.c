@@ -89,15 +89,59 @@ void calc_stop_flag(LocaData* ld, const size_t n_flags){
 	int size_y = ld->size_y;
 	for(int i = 0; i < n_flags; ++i){
 		ld->stopper[i] = 1;
-		for(int j = 0; j < size_y, ++j){
+		for(int j = 0; j < size_y; ++j){
 			for(int k = 0; k < size_x; ++k){
-				if(ld->data[j * size_x + k] != ld->previous_data[j * size_x + k]){
+				if(ld->data[j * size_x + k] != ld->previous_data[i][j * size_x + k]){
 					ld->stopper[i] = 0;
 					break;
 				}
 			}
 		}
 	}
+}
+
+void init_by_num(char* arr, const char num, const size_t size){
+	for(int i = 0; i < size; ++i){
+		arr[i] = num;
+	}
+}
+
+void calc_new_state_of_field_except_for_last_first(LocalData* ld, char* new_field){
+	int size_x = ld->size_x;
+	int size_y = ld->size_y;
+	for(int i = 2; i < size_y-2; i++){
+		for(int j = 0; j < size_x; ++j){
+			int n_alive = 0;
+			size_t prevx = (j-1)%size_x;
+			size_t nextx = (j+1)%size_x;
+			size_t prevy = (i-1)%size_y;
+			size_t nexty = (i+1)%size_y;
+
+			n_alive += ld->data[i*size_x+prevx];
+			n_alive += ld->data[i*size_x+nextx];
+
+			n_alive += ld->data[prevy*size_x+prevx];
+			n_alive += ld->data[prevy*size_x+j];
+			n_alive += ld->data[prevy*size_x+nexty];
+			n_alive += ld->data[nexty*size_x+prevx];
+			n_alive += ld->data[nexty*size_x+j];
+			n_alive += ld->data[nexty*size_x+nexty];
+
+			if(ld->data[i*size_x+j] == 1){
+				if(n_alive < 2 || n_alive > 3){
+					ld->data[i*size_x+j] = 0;
+				}
+			} else {
+				if(n_alive == 3){
+					ld->data[i*size_x+j] = 1;
+				}
+			}
+		}
+	}
+}
+
+void calc_string_condition(LocalData* ld, char* new_field, const char* str_begin){
+
 }
 
 /*
@@ -150,48 +194,93 @@ int main(int argc, char** argv) {
 	int n_elements_in_localdata = n_elements_in_distributed+2*local_field.size_x;
 	MPI_Barrier(MPI_COMM_WORLD);
 	printf("%d - %d %d\n",rank, local_field.size_x, local_field.size_y);
-	local_field.data[0] = (char*) malloc(sizeof(char)*n_elements_in_localdata);
+	local_field.data = (char*) malloc(sizeof(char)*n_elements_in_localdata);
+	//init_by_num(local_field.data, rank, n_elements_in_distributed);
 	local_field.previous_data = (char**) malloc(sizeof(char*) * n_iteration);
 	local_field.stopper = (char*) malloc(sizeof(char) * n_iteration);
 
 	ASSERT_SUCCEED(
 		MPI_Scatterv(field_full, 
 					sizes, offsets, MatString, 
-					local_field.data[0]+local_field.size_x, 
+					local_field.data+local_field.size_x, 
 					n_elements_in_distributed, 
 					MPI_CHAR, 0, cartComm)
 	);
 
-	/*
-	if(rank == 5){
-		print_mat(local_field.data[0], local_field.size_x, local_field.size_y);
-	}
-	*/
 
-	size_t first_str_pos = 0;
-	size_t last_str_pos  = n_elements_in_localdata-local_field.size_x-1;
+	//if(rank == 3){
+	//	print_mat(local_field.data, local_field.size_x, local_field.size_y);
+	//}
+
+
+	unsigned int iteration_passed;
+	char* first_str_ptr  = local_field.data;
+	char* last_str_ptr  = local_field.data+n_elements_in_localdata-local_field.size_x;
 	MPI_Request first_send, last_send;
 	MPI_Request first_recv, last_recv;
-	for(int iteration = 0; i < n_iteration; ++iteration){
+	MPI_Request stop_flag_alltoall;
+	for(iteration_passed = 0; iteration_passed < n_iteration; ++iteration_passed){
 		ASSERT_SUCCEED(
-			MPI_Isent(local_field.data[i%2][first_str_pos], 1, MatString, 
-					  previous_rank, FIRST_STRING_TAG, cartComm, &first_send);
+			MPI_Isend(first_str_ptr, 1, MatString, 
+					  previous_rank, FIRST_STRING_TAG, cartComm, &first_send)
 		);
 		ASSERT_SUCCEED(
-			MPI_Isent(local_field.data[i%2][last_str_pos], 1, MatString, 
-					  next_rank, LAST_STRING_TAG, cartComm, &last_send);
-		);
-
-		ASSERT_SUCCEED(
-			MPI_Irecv(local_field.data[i%2][first_str_pos], 1, MatString, 
-					  previous_rank, FIRST_STRING_TAG, cartComm, &first_recv);
-		);
-		ASSERT_SUCCEED(
-			MPI_Irecv(local_field.data[i%2][last_str_pos], 1, MatString, 
-					  next_rank, LAST_STRING_TAG, cartComm, &last_recv);
+			MPI_Isend(last_str_ptr, 1, MatString, 
+					  next_rank, LAST_STRING_TAG, cartComm, &last_send)
 		);
 
-		calc_stop_flag(local_data, iteration);
+		ASSERT_SUCCEED(
+			MPI_Irecv(first_str_ptr, 1, MatString, 
+					  previous_rank, FIRST_STRING_TAG, cartComm, &first_recv)
+		);
+		ASSERT_SUCCEED(
+			MPI_Irecv(last_str_ptr, 1, MatString, 
+					  next_rank, LAST_STRING_TAG, cartComm, &last_recv)
+		);
+
+		calc_stop_flag(&local_field, iteration_passed);
+
+		/*
+		ASSERT_SUCCEED(
+			MPI_Ialltoall(last_str_ptr, 1, MatString, 
+					  	  next_rank, LAST_STRING_TAG, cartComm, &stop_flag_alltoall)
+		);
+		*/
+
+		char* new_field = (char*) malloc(sizeof(char)*n_elements_in_localdata);
+		calc_new_state_of_field_except_for_last_first(&local_field, new_field);
+
+		MPI_SUCCESS(
+			MPI_Wait(first_send, MPI_STATUCS_IGNORE)
+		);
+
+		MPI_SUCCESS(
+			MPI_Wait(first_recv, MPI_STATUCS_IGNORE)
+		);
+
+		calc_string_condition(first);
+		
+		MPI_SUCCESS(
+			MPI_Wait(last_send, MPI_STATUCS_IGNORE)
+		);
+
+		MPI_SUCCESS(
+			MPI_Wait(last_recv, MPI_STATUCS_IGNORE)
+		);
+
+		calc_string_condition(last);
+
+		MPI_SUCCESS(
+			MPI_Wait(stop_flag_alltoall, MPI_STATUCS_IGNORE)
+		);
+/*
+		if( compare_stop_vect() ){
+			break;
+		} else {
+			local_field.previous_data[iteration_passed] = local_field.data;
+			local_field.data = new_field;
+		}
+*/
 	}
 
 
@@ -202,7 +291,8 @@ int main(int argc, char** argv) {
 	}
 
 	free(local_field.data);
-	for(int i = 0; i < n_iteration; ++i){
+
+	for(int i = 0; i < iteration_passed; ++i){
 		free(local_field.previous_data[i]);
 	}
 	free(local_field.previous_data);
