@@ -140,8 +140,68 @@ void calc_new_state_of_field_except_for_last_first(LocalData* ld, char* new_fiel
 	}
 }
 
-void calc_string_condition(LocalData* ld, char* new_field, const char* str_begin){
+void write_matrix(const char* arr, const size_t size, const char* path){
+	FILE* out = fopen(path, "w");
 
+	for(int i = 0; i < size; ++i){
+		for(int j = 0; j < size; ++j){
+			fprintf(out, "%d ", arr[i*size+j]);
+		}
+		fputc('\n', out);
+	}
+
+	fclose(out);
+}
+
+int calc_cell(const char* field, const size_t pos_x, const size_t pos_y, 
+	  		  const size_t size_x, const size_t size_y){
+	int n_alive = 0;
+	size_t prevx = (pos_x-1)%size_x;
+	size_t nextx = (pos_x+1)%size_x;
+	size_t prevy = (pos_y-1)%size_y;
+	size_t nexty = (pos_y+1)%size_y;
+
+	n_alive += field[i*size_x+prevx];
+	n_alive += field[i*size_x+nextx];
+
+	n_alive += field[prevy*size_x+prevx];
+	n_alive += field[prevy*size_x+j];
+	n_alive += field[prevy*size_x+nexty];
+	n_alive += field[nexty*size_x+prevx];
+	n_alive += field[nexty*size_x+j];
+	n_alive += field[nexty*size_x+nexty];
+
+	return n_alive;
+}
+
+void calc_string_condition(LocalData* ld, char* new_field, const size_t* posY){
+	for(int j = 0; j < size_x; ++j){
+		int n_alive = 0;
+		size_t prevx = (j-1)%size_x;
+		size_t nextx = (j+1)%size_x;
+		size_t prevy = (posY-1)%size_y;
+		size_t nexty = (posY+1)%size_y;
+
+		n_alive += ld->data[i*size_x+prevx];
+		n_alive += ld->data[i*size_x+nextx];
+
+		n_alive += ld->data[prevy*size_x+prevx];
+		n_alive += ld->data[prevy*size_x+j];
+		n_alive += ld->data[prevy*size_x+nexty];
+		n_alive += ld->data[nexty*size_x+prevx];
+		n_alive += ld->data[nexty*size_x+j];
+		n_alive += ld->data[nexty*size_x+nexty];
+
+		if(ld->data[i*size_x+j] == 1){
+			if(n_alive < 2 || n_alive > 3){
+				ld->data[i*size_x+j] = 0;
+			}
+		} else {
+			if(n_alive == 3){
+				ld->data[i*size_x+j] = 1;
+			}
+		}
+	}
 }
 
 /*
@@ -150,6 +210,10 @@ void calc_string_condition(LocalData* ld, char* new_field, const char* str_begin
 	Запись параллельно?
 	MPI_File_iread_all
 */
+
+int compare_stop_vect(){
+	return 0;
+}
 
 int main(int argc, char** argv) {
 
@@ -239,56 +303,59 @@ int main(int argc, char** argv) {
 		);
 
 		calc_stop_flag(&local_field, iteration_passed);
+		//Был получен флаг останова длины iteration_passed в local_field.stopper
 
-		/*
 		ASSERT_SUCCEED(
 			MPI_Ialltoall(last_str_ptr, 1, MatString, 
-					  	  next_rank, LAST_STRING_TAG, cartComm, &stop_flag_alltoall)
+		 			  	  next_rank, LAST_STRING_TAG, cartComm, &stop_flag_alltoall)
 		);
-		*/
 
 		char* new_field = (char*) malloc(sizeof(char)*n_elements_in_localdata);
 		calc_new_state_of_field_except_for_last_first(&local_field, new_field);
 
-		MPI_SUCCESS(
-			MPI_Wait(first_send, MPI_STATUCS_IGNORE)
+		ASSERT_SUCCEED(
+			MPI_Wait(&first_send, MPI_STATUS_IGNORE)
 		);
 
-		MPI_SUCCESS(
-			MPI_Wait(first_recv, MPI_STATUCS_IGNORE)
+		ASSERT_SUCCEED(
+			MPI_Wait(&first_recv, MPI_STATUS_IGNORE)
 		);
 
-		calc_string_condition(first);
+		calc_string_condition(local_field, new_field, 1);
 		
-		MPI_SUCCESS(
-			MPI_Wait(last_send, MPI_STATUCS_IGNORE)
+		ASSERT_SUCCEED(
+			MPI_Wait(&last_send, MPI_STATUS_IGNORE)
 		);
 
-		MPI_SUCCESS(
-			MPI_Wait(last_recv, MPI_STATUCS_IGNORE)
+		ASSERT_SUCCEED(
+			MPI_Wait(&last_recv, MPI_STATUS_IGNORE)
 		);
 
-		calc_string_condition(last);
+		calc_string_condition(local_field, new_field, local_field.size_y-1);
 
-		MPI_SUCCESS(
-			MPI_Wait(stop_flag_alltoall, MPI_STATUCS_IGNORE)
+		ASSERT_SUCCEED(
+			MPI_Wait(&stop_flag_alltoall, MPI_STATUS_IGNORE)
 		);
-/*
+
 		if( compare_stop_vect() ){
 			break;
 		} else {
 			local_field.previous_data[iteration_passed] = local_field.data;
 			local_field.data = new_field;
 		}
-*/
+
 	}
 
-
+	ASSERT_SUCCEED(
+		MPI_Gatherv(local_field.data, sizes[rank], MatString, 
+				    field_full, sizes, offsets, MatString, 0, cartComm)
+	);
 	
+	if(rank == 0)
+		write_matrix(field_full, size_fld, argv[3]);
 
-	if(rank == 0){
-		free(field_full);
-	}
+	if(rank == 0)
+		free(field_full);	
 
 	free(local_field.data);
 
