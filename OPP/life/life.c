@@ -21,7 +21,13 @@ typedef struct LocalData {
 int size; 		   // num of procceses
 MPI_Comm cartComm; // cartesian communicator
 
-void print_line(const char* line, const int size) {
+void print_line_char(const char* line, const int size) {
+	for (int j = 0; j < size; ++j) {
+		printf("%d ", line[j]);
+	}
+	printf("\n");
+}
+void print_line_int(const int* line, const int size) {
 	for (int j = 0; j < size; ++j) {
 		printf("%d ", line[j]);
 	}
@@ -73,13 +79,10 @@ void print_mat(const char* mat, const int sizeX, const int sizeY) {
 
 void write_matrix(const char* arr, const size_t size, const char* path) {
 	FILE* out = fopen(path, "w");
-	printf("===============%d\n", size);
 	for (int i = 0; i < size; ++i) {
 		for (int j = 0; j < size; ++j) {
-			printf("%d ", arr[i * size + j]);
 			fprintf(out, "%d ", arr[i * size + j]);
 		}
-		printf("\n");
 		fputc('\n', out);
 	}
 
@@ -139,28 +142,17 @@ int calc_cell(const char* field, const size_t pos_x, const size_t pos_y,
 	n_alive += field[nexty * size_x + pos_x];
 	n_alive += field[nexty * size_x + nextx];
 
-/*	printf("%d %d %d %d %d %d %d %d\n", field[pos_y * size_x + prevx], field[pos_y * size_x + nextx],
-		field[prevy * size_x + prevx], field[prevy * size_x + pos_x], field[prevy * size_x + nextx],
-		field[nexty * size_x + prevx], field[nexty * size_x + pos_x], field[nexty * size_x + nextx]);*/
-/*	printf("%ld %ld %ld %ld curr(%ld, %ld) = %d:  ", prevx, nextx, prevy, nexty, pos_x, pos_y, n_alive);
-	printf("\n%d - %d \n UP: %d %d %d \n DOWN: %d %d %d\n", 
-		field[pos_y * size_x + prevx], field[pos_y * size_x + nextx],
-		field[prevy * size_x + prevx], field[prevy * size_x + pos_x], field[prevy * size_x + nextx],
-		field[nexty * size_x + prevx], field[nexty * size_x + pos_x], field[nexty * size_x + nextx]);*/
 	return n_alive;
 }
 
 void calc_new_state_of_field_except_for_last_first(LocalData* ld, char* new_field) {
 	int size_x = ld->size_x;
 	int size_y = ld->size_y;
-	//printf("--------+%d \n\n", size_y);
 	for (int i = 2; i < size_y-2; i++) {
-			//print_mat(ld->data, size_x, size_y);
 		for (int j = 0; j < size_x; ++j) {
 			int n_alive = calc_cell(ld->data, j, i, size_x, size_y);
 			int curr_pos_arr_linear = i * size_x + j;
 
-			//printf("(%ld, %ld): init-%d% d\n", j, i, ld->data[curr_pos_arr_linear], n_alive);
 			if (ld->data[curr_pos_arr_linear] == 1) {
 				if (n_alive < 2 || n_alive > 3) {
 					new_field[curr_pos_arr_linear] = 0;
@@ -210,7 +202,6 @@ void calc_string_condition(LocalData* ld, char* new_field, const size_t posY) {
 */
 
 int how_many_was_one_in_stop_vect(const char* stopper, const size_t block_size) {
-	//printf(">>>>>>>>>%d\n", block_size);
 	int was_one = 0;
 	for(int i = 0; i < block_size; ++i){
 		int num_of_ones = 0;
@@ -228,7 +219,6 @@ int how_many_was_one_in_stop_vect(const char* stopper, const size_t block_size) 
 	ASSERT_SUCCEED(
 		MPI_Allreduce(&was_one, &how_many_was_one, 1, MPI_INT, MPI_SUM, cartComm)
 	);
-	//printf("!!!!>>>>>>>>>%d %d\n", how_many_was_one, size);
 	return how_many_was_one;
 }
 
@@ -254,7 +244,6 @@ int main(int argc, char** argv) {
 	int* sizes = (int*)(malloc(sizeof(int) * size));
 	int* offsets = (int*)(malloc(sizeof(int) * size));
 	define_scatterv_matrixs(sizes, offsets, size_fld);
-	
 	MPI_Datatype MatString;
 	init_matString_type(&MatString, size_fld);
 
@@ -267,23 +256,20 @@ int main(int argc, char** argv) {
 	int n_elements_in_localdata = local_data.size_x * local_data.size_y;
 	local_data.data = (char*)malloc(sizeof(char) * n_elements_in_localdata);
 	local_data.previous_data = (char**)malloc(sizeof(char*) * n_iteration);
-	local_data.stopper = (char*)malloc(sizeof(char) * n_iteration);
+	local_data.stopper = (char*)malloc(sizeof(char) * (n_iteration+1));
 	init_by_num(local_data.stopper, 120, n_iteration);
-	char* stopper_distributed_alltoall = (char*)malloc(sizeof(char) * n_iteration);
+	char* stopper_distributed_alltoall = (char*)malloc(sizeof(char) * (n_iteration+1));
 	init_by_num(stopper_distributed_alltoall, 127, n_iteration);
-
-	MPI_Barrier(MPI_COMM_WORLD);
-	printf("%d SIZES: %d %d\n", rank, local_data.size_x, local_data.size_y);
 
 	ASSERT_SUCCEED(
 		MPI_Scatterv(field_full,
 			sizes, offsets, MatString,
-			local_data.data + local_data.size_x,
-			sizes[rank]*size_fld,
-			MPI_CHAR, 0, cartComm)
+			local_data.data+local_data.size_x,
+			sizes[rank],
+			MatString, 0, cartComm)
 	);
 
-	unsigned int iteration_passed = 0;
+	int iteration_passed = 0;
 	MPI_Request second_send, prelast_send;
 	MPI_Request first_recv, last_recv;
 	MPI_Request stop_flag_alltoall;
@@ -313,17 +299,14 @@ int main(int argc, char** argv) {
 		);
 		
 		calc_stop_flag(&local_data, iteration_passed);
-/*
-		if(rank == 0)
-			print_line(local_data.stopper, iteration_passed);
-		MPI_Barrier(MPI_COMM_WORLD);
-		if(rank == 1)
-			print_line(local_data.stopper, iteration_passed);
-		MPI_Barrier(MPI_COMM_WORLD);
-*/
 		//Был получен флаг останова длины iteration_passed в local_data.stopper
 
-		int block_stopper_size = ceil((double)iteration_passed/size);
+		// V ceil() <math.h>
+		int block_stopper_size;
+		if(((double)iteration_passed/size) != (block_stopper_size = iteration_passed/size)){
+			++block_stopper_size;
+		}
+
 		ASSERT_SUCCEED(
 			MPI_Ialltoall(local_data.stopper, block_stopper_size, MPI_CHAR,
 						  stopper_distributed_alltoall, block_stopper_size, MPI_CHAR,
@@ -356,25 +339,7 @@ int main(int argc, char** argv) {
 			MPI_Wait(&stop_flag_alltoall, MPI_STATUS_IGNORE)
 		);
 
-		int a = how_many_was_one_in_stop_vect(stopper_distributed_alltoall, block_stopper_size);
-		//printf("IIII: %d\n", iteration_passed);
-		if (a >= 1) {
-
-					if(rank == 0){
-					printf("\nV---------%d-----%d-----\n", a, iteration_passed);
-					printf("%d\n", block_stopper_size);
-					print_line(local_data.stopper, iteration_passed+1);
-					print_line(stopper_distributed_alltoall, iteration_passed+1);
-				}
-				MPI_Barrier(MPI_COMM_WORLD);
-				if(rank == 1){
-					printf("\n");
-					print_line(local_data.stopper, iteration_passed+1);
-					print_line(stopper_distributed_alltoall, iteration_passed+1);
-					printf("^--------------------\n\n");
-				}
-				MPI_Barrier(MPI_COMM_WORLD);
-
+		if (how_many_was_one_in_stop_vect(stopper_distributed_alltoall, block_stopper_size) >= 1) {
 			--iteration_passed;
 			break;
 		} else {
