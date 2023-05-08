@@ -66,6 +66,16 @@ void read_field(char* path, char* field, const size_t size_fld) {
 	fclose(in);
 }
 
+void print_mat_int(const char* mat, const int sizeX, const int sizeY) {
+	for (int i = 0; i < sizeY; ++i) {
+		for (int j = 0; j < sizeX; ++j) {
+			printf("%d ", mat[i * sizeX + j]);
+		}
+		printf("\n");
+	}
+	printf("\n");
+}
+
 void print_mat(const char* mat, const int sizeX, const int sizeY) {
 	for (int i = 0; i < sizeY; ++i) {
 		for (int j = 0; j < sizeX; ++j) {
@@ -194,13 +204,6 @@ void calc_string_condition(LocalData* ld, char* new_field, const size_t posY) {
 	}
 }
 
-/*
-	Чтение параллельно?
-	Каждый процесс читает свою часть?
-	Запись параллельно?
-	MPI_File_iread_all
-*/
-
 int how_many_was_one_in_stop_vect(const char* stopper, const size_t block_size) {
 	int was_one = 0;
 	for(int i = 0; i < block_size; ++i){
@@ -222,38 +225,58 @@ int how_many_was_one_in_stop_vect(const char* stopper, const size_t block_size) 
 	return how_many_was_one;
 }
 
+void init_file_string_type(MPI_Datatype* type, const int line_length){
+	MPI_Type_vector(line_length, line_length, line_length+1, MPI_CHAR, type);
+	MPI_Type_commit(type);
+}
+
+char convert_ascii_to_integer(char in){
+	return in - 48;
+}
+char convert_integer_to_ascii(char in){
+	return in + 48;
+}
+size_t get_extend(){
+	return 1;
+}
+
 int main(int argc, char** argv) {
+	int rank;
+	const int n_iteration = atoi(argv[4]);
+	size_t size_fld = atol(argv[1]);
 
 	ASSERT_SUCCEED(MPI_Init(&argc, &argv));
-
-	int rank;
 
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 	create_topology(&cartComm, size);
 	MPI_Comm_rank(cartComm, &rank);
 	
-	const int n_iteration = atoi(argv[4]);
-	size_t size_fld = atol(argv[1]);
-
-	char* field_full = NULL;
-	if (rank == 0) {
-		field_full = (char*)malloc(sizeof(char) * size_fld * size_fld);
-		read_field(argv[2], field_full, size_fld);
-	}
-	
 	int* sizes = (int*)(malloc(sizeof(int) * size));
 	int* offsets = (int*)(malloc(sizeof(int) * size));
 	define_scatterv_matrixs(sizes, offsets, size_fld);
+
 	MPI_Datatype MatString;
 	init_matString_type(&MatString, size_fld);
 
+	MPI_File infile, outfile;
+	MPI_Datatype fileType;
+	init_file_string_type(&fileType, size_fld);
+
+	// (size_fld+1) - to take into account line breaks
+	ASSERT_SUCCEED(MPI_File_open(cartComm, argv[2], MPI_MODE_RDONLY, MPI_INFO_NULL, &infile));
+	ASSERT_SUCCEED(MPI_File_set_view(infile, offsets[rank]*(size_fld+1), MPI_CHAR, fileType, "native", MPI_INFO_NULL));
+
+	ASSERT_SUCCEED(MPI_File_open(cartComm, argv[3], MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL, &outfile));
+	ASSERT_SUCCEED(MPI_File_set_view(outfile, offsets[rank]*(size_fld+1), MPI_CHAR, MPI_CHAR, "native", MPI_INFO_NULL));
+
 	int previous_rank, next_rank; // previous = upper; next = lower 
 	ASSERT_SUCCEED(MPI_Cart_shift(cartComm, 0, 1, &previous_rank, &next_rank));
-	
+
 	LocalData local_data;
 	local_data.size_x = size_fld;
 	local_data.size_y = sizes[rank] + 2;
 	int n_elements_in_localdata = local_data.size_x * local_data.size_y;
+	int n_elements_in_localdata_without_extra_str = size_fld * sizes[rank];
 	local_data.data = (char*)malloc(sizeof(char) * n_elements_in_localdata);
 	local_data.previous_data = (char**)malloc(sizeof(char*) * n_iteration);
 	local_data.stopper = (char*)malloc(sizeof(char) * (n_iteration+1));
@@ -261,6 +284,28 @@ int main(int argc, char** argv) {
 	char* stopper_distributed_alltoall = (char*)malloc(sizeof(char) * (n_iteration+1));
 	init_by_num(stopper_distributed_alltoall, 127, n_iteration);
 
+	ASSERT_SUCCEED(MPI_File_read(infile, local_data.data+local_data.size_x,
+								 n_elements_in_localdata_without_extra_str, MPI_CHAR, MPI_STATUS_IGNORE));
+	if(rank == 0){
+		print_mat(local_data.data, local_data.size_x, local_data.size_y);
+	}
+	MPI_Barrier(MPI_COMM_WORLD);
+	if(rank == 1){
+		print_mat(local_data.data, local_data.size_x, local_data.size_y);
+	}
+	MPI_Barrier(MPI_COMM_WORLD);
+	if(rank == 2){
+		print_mat(local_data.data, local_data.size_x, local_data.size_y);
+	}
+
+	char caret = '\n';
+	printf("%d %d\n", rank, sizes[rank]);
+	for(int i = 1; i <= sizes[rank]; ++i){
+		ASSERT_SUCCEED(MPI_File_write(outfile, local_data.data+local_data.size_x*i, local_data.size_x, MPI_CHAR, MPI_STATUS_IGNORE));
+		ASSERT_SUCCEED(MPI_File_write(outfile, &caret, 1, MPI_CHAR, MPI_STATUS_IGNORE));
+	}
+
+/*
 	ASSERT_SUCCEED(
 		MPI_Scatterv(field_full,
 			sizes, offsets, MatString,
@@ -371,7 +416,11 @@ int main(int argc, char** argv) {
 	free(sizes);
 	free(offsets);
 	free(stopper_distributed_alltoall);
+	*/
 
+	MPI_Type_free(&fileType);
+	ASSERT_SUCCEED(MPI_File_close(&infile));
+	ASSERT_SUCCEED(MPI_File_close(&outfile));
 	ASSERT_SUCCEED(MPI_Type_free(&MatString));
 
 	ASSERT_SUCCEED(MPI_Finalize());
