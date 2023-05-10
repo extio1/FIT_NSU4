@@ -7,20 +7,17 @@ import factory.product.Car;
 import factory.product.Engine;
 
 public class CreateCar implements Runnable{
-    private static Storage<Engine> engineStorage;
-    private static Storage<Body> bodyStorage;
-    private static Storage<Accessory> accessoryStorage;
-    private static Storage<Car> carStorage;
+    private final Storage<Engine> engineStorage;
+    private final Storage<Body> bodyStorage;
+    private final Storage<Accessory> accessoryStorage;
+    private final Storage<Car> carStorage;
 
-    public CreateCar(){
-    }
-
-    public static void setStorages(Storage<Engine> engineStorage, Storage<Body> bodyStorage,
-                            Storage<Accessory> accessoryStorage, Storage<Car> carStorage) {
-        CreateCar.engineStorage = engineStorage;
-        CreateCar.carStorage = carStorage;
-        CreateCar.bodyStorage = bodyStorage;
-        CreateCar.accessoryStorage = accessoryStorage;
+    public CreateCar(Storage<Engine> engineStorage, Storage<Body> bodyStorage,
+                     Storage<Accessory> accessoryStorage, Storage<Car> carStorage){
+        this.engineStorage = engineStorage;
+        this.bodyStorage = bodyStorage;
+        this.accessoryStorage = accessoryStorage;
+        this.carStorage = carStorage;
     }
 
     @Override
