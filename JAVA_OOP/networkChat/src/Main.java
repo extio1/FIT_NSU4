@@ -13,7 +13,11 @@ public class Main {
             System.out.println(e.getMessage());
         }
 
-        Client clientConsole = new ClientSerialize();
-        ChatClientGui gui = new ChatClientGui(clientConsole);
+        try {
+            Client clientConsole = new ClientSerialize();
+            ChatClientGui gui = new ChatClientGui(clientConsole);
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
     }
 }
