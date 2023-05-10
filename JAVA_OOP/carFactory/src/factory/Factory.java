@@ -80,13 +80,12 @@ public class Factory implements Publisher{
         bodyStorage = new SingleSpeciesStorage<>(configurationInfo.storageBodySize());
         engineStorage = new SingleSpeciesStorage<>(configurationInfo.storageMotorSize());
         accessoryStorage = new SingleSpeciesStorage<>(configurationInfo.storageAccessorySize());
-        CreateCar.setStorages(engineStorage, bodyStorage, accessoryStorage, carStorage);
 
         //Thread pool creating
         workers = new PoolExecutor(configurationInfo.workers());
 
         //Cars storage controller
-        carStorageController = new CarStorageController(carStorage, workers);
+        carStorageController = new CarStorageController(carStorage, engineStorage, bodyStorage, accessoryStorage, workers);
 
         //Providers creating
         engineProvider = new Provider<>(configurationInfo.engineDelay(), Engine.class, engineStorage, 0);
