@@ -1,4 +1,4 @@
 package protocol.serverObject;
 
-public interface DetachedUserServer {
+public interface DetachedUserServer extends ObjectServer {
 }

@@ -1,4 +1,4 @@
 package protocol.serverObject;
 
-public interface SuccessAnswerServer {
+public interface SuccessAnswerServer extends ObjectServer {
 }

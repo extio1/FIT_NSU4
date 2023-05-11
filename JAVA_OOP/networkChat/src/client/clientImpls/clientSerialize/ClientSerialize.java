@@ -1,4 +1,4 @@
-package client.clientImpls;
+package client.clientImpls.clientSerialize;
 
 import client.Client;
 import client.exception.ConfigurationException;
@@ -11,13 +11,33 @@ import java.net.Socket;
 import java.util.Properties;
 
 public class ClientSerialize implements Client {
-    private final ServerListener serverOutput;
+    private final ServerListener serverListener;
     private final ObjectOutputStream clientOutput;
 
     private final Socket socket;
     private final ClientProperty configuration;
 
     private final UserMessageFabric messageFabric;
+
+    @Override
+    public void requestUserList() throws IOException {
+        clientOutput.writeObject(messageFabric.makeListUser());
+    }
+
+    @Override
+    public void send(String message) throws IOException {
+        clientOutput.writeObject(messageFabric.makeMessageUser(message));
+    }
+
+    @Override
+    public void closeSession() throws IOException {
+        clientOutput.writeObject(messageFabric.makeDetachUser());
+    }
+
+    @Override
+    public void registerNewUser(String user) throws IOException {
+        clientOutput.writeObject(messageFabric.makeRegisterUser(user));
+    }
 
     public ClientSerialize() throws IOException, ConfigurationException {
         this("resources/client.properties");
@@ -33,40 +53,16 @@ public class ClientSerialize implements Client {
             throw new UnknownImplementationException(configuration.implName);
         }
 
-        serverOutput = new ServerListener(socket.getInputStream());
+        serverListener = new ServerListener(socket);
         clientOutput = new ObjectOutputStream(socket.getOutputStream());
 
-        serverOutput.start();
-    }
-
-    @Override
-    public void send(String message) throws IOException {
-        clientOutput.writeObject(messageFabric.makeMessageUser(message));
-    }
-
-    @Override
-    public void closeSession() throws IOException {
-        clientOutput.writeObject(messageFabric.makeDetachUser());
-    }
-
-
-    private static class UserInput extends Thread{
-        private BufferedInputStream userMessageReader;
-        public void connectMassageWriter(BufferedInputStream userInputStream) throws IOException {
-            this.userMessageReader = userInputStream;
-        }
-
-        @Override
-        public void run() {
-            while(!Thread.interrupted()){
-            }
-        }
+        serverListener.start();
     }
 
     private static class ServerListener extends Thread{
         ObjectInputStream in;
-        public ServerListener(InputStream in) throws IOException {
-            this.in = new ObjectInputStream(in);
+        public ServerListener(Socket socketToListen) throws IOException {
+            this.in = new ObjectInputStream(socketToListen.getInputStream());
         }
 
         @Override
@@ -82,18 +78,20 @@ public class ClientSerialize implements Client {
         }
     }
 
-    private ClientProperty setupByConfig(String path){
+    private record ClientProperty(
+            String hostName,
+            int port,
+            String implName
+    ) {}
+
+    private ClientProperty setupByConfig(String path) throws IOException {
         Properties properties = new Properties();
+        properties.load(new FileInputStream(path));
+
         String ip = properties.getProperty("serverName");
         int port = Integer.parseInt(properties.getProperty("port"));
         String implName = properties.getProperty("implementation");
 
         return new ClientProperty(ip, port, implName);
     }
-
-    private record ClientProperty(
-            String hostName,
-            int port,
-            String implName
-    ) {}
 }

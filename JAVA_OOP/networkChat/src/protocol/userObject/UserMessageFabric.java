@@ -4,5 +4,5 @@ public interface UserMessageFabric {
     DetachUser makeDetachUser();
     ListUser makeListUser();
     MessageUser makeMessageUser(String message);
-    RegisterUser makeRegisterUser();
+    RegisterUser makeRegisterUser(String name);
 }

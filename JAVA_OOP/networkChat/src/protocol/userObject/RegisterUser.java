@@ -1,4 +1,4 @@
 package protocol.userObject;
 
-public interface RegisterUser {
+public interface RegisterUser extends ObjectUser{
 }

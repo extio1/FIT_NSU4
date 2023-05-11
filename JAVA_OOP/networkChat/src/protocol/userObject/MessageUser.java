@@ -1,4 +1,4 @@
 package protocol.userObject;
 
-public interface MessageUser {
+public interface MessageUser extends ObjectUser{
 }

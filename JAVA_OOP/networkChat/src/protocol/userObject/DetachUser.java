@@ -1,4 +1,4 @@
 package protocol.userObject;
 
-public interface DetachUser {
+public interface DetachUser extends ObjectUser {
 }

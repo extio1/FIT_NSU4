@@ -1,4 +1,4 @@
 package protocol.userObject;
 
-public interface ListUser {
+public interface ListUser extends ObjectUser{
 }

@@ -19,7 +19,7 @@ public class UserSerializedFabric implements UserMessageFabric {
     }
 
     @Override
-    public RegisterUser makeRegisterUser() {
+    public RegisterUser makeRegisterUser(String name) {
         return null;
     }
 }

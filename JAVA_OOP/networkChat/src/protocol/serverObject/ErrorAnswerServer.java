@@ -1,4 +1,4 @@
 package protocol.serverObject;
 
-public interface ErrorAnswerServer {
+public interface ErrorAnswerServer extends ObjectServer {
 }

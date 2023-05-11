@@ -1,5 +1,5 @@
 import client.Client;
-import client.clientImpls.ClientSerialize;
+import client.clientImpls.clientSerialize.ClientSerialize;
 import client.view.ChatClientGui;
 import server.Server;
 
