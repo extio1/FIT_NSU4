@@ -21,18 +21,6 @@ typedef struct LocalData {
 int size; 		   // num of procceses
 MPI_Comm cartComm; // cartesian communicator
 
-void print_line_char(const char* line, const int size) {
-	for (int j = 0; j < size; ++j) {
-		printf("%d ", line[j]);
-	}
-	printf("\n");
-}
-void print_line_int(const int* line, const int size) {
-	for (int j = 0; j < size; ++j) {
-		printf("%d ", line[j]);
-	}
-	printf("\n");
-}
 
 void define_scatterv_matrixs(int* sizes, int* offsets, const int size_mat) {
 	int extraCells = size_mat % size;
@@ -51,54 +39,6 @@ void define_scatterv_matrixs(int* sizes, int* offsets, const int size_mat) {
 	}
 }
 
-// За-mmap-ить?
-void read_field(char* path, char* field, const size_t size_fld) {
-	FILE* in = fopen(path, "r");
-	char* buff = (char*)malloc(sizeof(char) * size_fld * 3);
-	for (int i = 0; i < size_fld; ++i) {
-		fgets(buff, size_fld * 2 + 2, in);
-		//printf("%s|||||||||||||\n", buff);
-		for (int j = 0; j < size_fld; ++j) {
-			field[i * size_fld + j] = ASCII_TO_INT(buff[j * 2]);
-		}
-	}
-	free(buff);
-	fclose(in);
-}
-
-void print_mat_int(const char* mat, const int sizeX, const int sizeY) {
-	for (int i = 0; i < sizeY; ++i) {
-		for (int j = 0; j < sizeX; ++j) {
-			printf("%d ", mat[i * sizeX + j]);
-		}
-		printf("\n");
-	}
-	printf("\n");
-}
-
-void print_mat(const char* mat, const int sizeX, const int sizeY) {
-	for (int i = 0; i < sizeY; ++i) {
-		for (int j = 0; j < sizeX; ++j) {
-			printf("%d ", mat[i * sizeX + j]);
-		}
-		printf("\n");
-	}
-	printf("\n");
-}
-
-
-void write_matrix(const char* arr, const size_t size, const char* path) {
-	FILE* out = fopen(path, "w");
-	for (int i = 0; i < size; ++i) {
-		for (int j = 0; j < size; ++j) {
-			fprintf(out, "%d ", arr[i * size + j]);
-		}
-		fputc('\n', out);
-	}
-
-	fclose(out);
-}
-
 void create_topology(MPI_Comm* comm, const int size) {
 	int dims[N_DIMS] = { size };
 	int periodic[N_DIMS] = { 1 };
@@ -110,7 +50,6 @@ void init_matString_type(MPI_Datatype* type, const int line_length) {
 	ASSERT_SUCCEED(MPI_Type_commit(type));
 }
 
-//кандидат на векторизацию
 void calc_stop_flag(LocaData* ld, const size_t n_flags) {
 	int size_x = ld->size_x;
 	int size_y = ld->size_y;
@@ -131,6 +70,22 @@ void calc_stop_flag(LocaData* ld, const size_t n_flags) {
 void init_by_num(char* arr, const char num, const size_t size) {
 	for (int i = 0; i < size; ++i) {
 		arr[i] = num;
+	}
+}
+
+void kill_or_revive_cell(const char* cell, const int n_alive_around, char* new_cell){
+	if (*cell == 1) {
+		if (n_alive_around < 2 || n_alive_around > 3) {
+			*new_cell = 0;
+		} else {
+			*new_cell = 1;
+		}
+	} else {
+		if (n_alive_around == 3) {
+			*new_cell = 1;
+		} else {
+			*new_cell = 0;
+		}
 	}
 }
 
@@ -162,45 +117,17 @@ void calc_new_state_of_field_except_for_last_first(LocalData* ld, char* new_fiel
 		for (int j = 0; j < size_x; ++j) {
 			int n_alive = calc_cell(ld->data, j, i, size_x, size_y);
 			int curr_pos_arr_linear = i * size_x + j;
-
-			if (ld->data[curr_pos_arr_linear] == 1) {
-				if (n_alive < 2 || n_alive > 3) {
-					new_field[curr_pos_arr_linear] = 0;
-				} else {
-					new_field[curr_pos_arr_linear] = 1;
-				}
-			} else {
-				if (n_alive == 3) {
-					new_field[curr_pos_arr_linear] = 1;
-				} else {
-					new_field[curr_pos_arr_linear] = 0;
-				}
-			}
+			kill_or_revive_cell(&ld->data[curr_pos_arr_linear], n_alive, &new_field[curr_pos_arr_linear]);
 		}
 	}
 }
 
 void calc_string_condition(LocalData* ld, char* new_field, const size_t posY) {
 	size_t size_x = ld->size_x, size_y = ld->size_y;
-
 	for (int j = 0; j < size_x; ++j) {
 		int n_alive = calc_cell(ld->data, j, posY, size_x, size_y);
 		int curr_pos_arr_linear = posY * size_x + j;
-
-		if (ld->data[curr_pos_arr_linear] == 1) {
-			if (n_alive < 2 || n_alive > 3) {
-				new_field[curr_pos_arr_linear] = 0;
-			} else {
-				new_field[curr_pos_arr_linear] = 1;
-			}
-		}
-		else {
-			if (n_alive == 3) {
-				new_field[curr_pos_arr_linear] = 1;
-			} else {
-				new_field[curr_pos_arr_linear] = 0;
-			}
-		}
+		kill_or_revive_cell(&ld->data[curr_pos_arr_linear], n_alive, &new_field[curr_pos_arr_linear]);
 	}
 }
 
@@ -230,20 +157,23 @@ void init_file_string_type(MPI_Datatype* type, const int line_length){
 	MPI_Type_commit(type);
 }
 
-char convert_ascii_to_integer(char in){
-	return in - 48;
+void ascii_to_integer(char* arr, const size_t arr_size){
+	for(int i = 0; i < arr_size; ++i){
+		arr[i] -= 48;
+	}
 }
-char convert_integer_to_ascii(char in){
-	return in + 48;
+
+void integer_to_ascii(char* arr, const size_t arr_size){
+	for(int i = 0; i < arr_size; ++i){
+		arr[i] += 48;
+	}
 }
-size_t get_extend(){
-	return 1;
-}
+
 
 int main(int argc, char** argv) {
 	int rank;
 	const int n_iteration = atoi(argv[4]);
-	size_t size_fld = atol(argv[1]);
+	const size_t size_fld = atol(argv[1]);
 
 	ASSERT_SUCCEED(MPI_Init(&argc, &argv));
 
@@ -279,40 +209,13 @@ int main(int argc, char** argv) {
 	int n_elements_in_localdata_without_extra_str = size_fld * sizes[rank];
 	local_data.data = (char*)malloc(sizeof(char) * n_elements_in_localdata);
 	local_data.previous_data = (char**)malloc(sizeof(char*) * n_iteration);
-	local_data.stopper = (char*)malloc(sizeof(char) * (n_iteration+1));
-	init_by_num(local_data.stopper, 120, n_iteration);
-	char* stopper_distributed_alltoall = (char*)malloc(sizeof(char) * (n_iteration+1));
-	init_by_num(stopper_distributed_alltoall, 127, n_iteration);
+	local_data.stopper = (char*)calloc((n_iteration+1), sizeof(char));
+	char* local_field_begin = local_data.data+local_data.size_x;
+	char* stopper_distributed_alltoall = (char*)calloc((n_iteration+1), sizeof(char));
 
-	ASSERT_SUCCEED(MPI_File_read(infile, local_data.data+local_data.size_x,
-								 n_elements_in_localdata_without_extra_str, MPI_CHAR, MPI_STATUS_IGNORE));
-	if(rank == 0){
-		print_mat(local_data.data, local_data.size_x, local_data.size_y);
-	}
-	MPI_Barrier(MPI_COMM_WORLD);
-	if(rank == 1){
-		print_mat(local_data.data, local_data.size_x, local_data.size_y);
-	}
-	MPI_Barrier(MPI_COMM_WORLD);
-	if(rank == 2){
-		print_mat(local_data.data, local_data.size_x, local_data.size_y);
-	}
-
-	char caret = '\n';
-	printf("%d %d\n", rank, sizes[rank]);
-	for(int i = 1; i <= sizes[rank]; ++i){
-		ASSERT_SUCCEED(MPI_File_write(outfile, local_data.data+local_data.size_x*i, local_data.size_x, MPI_CHAR, MPI_STATUS_IGNORE));
-		ASSERT_SUCCEED(MPI_File_write(outfile, &caret, 1, MPI_CHAR, MPI_STATUS_IGNORE));
-	}
-
-/*
-	ASSERT_SUCCEED(
-		MPI_Scatterv(field_full,
-			sizes, offsets, MatString,
-			local_data.data+local_data.size_x,
-			sizes[rank],
-			MatString, 0, cartComm)
-	);
+	ASSERT_SUCCEED(MPI_File_read(infile, local_field_begin,
+								n_elements_in_localdata_without_extra_str, MPI_CHAR, MPI_STATUS_IGNORE));
+	ascii_to_integer(local_field_begin, n_elements_in_localdata_without_extra_str);
 
 	int iteration_passed = 0;
 	MPI_Request second_send, prelast_send;
@@ -344,9 +247,9 @@ int main(int argc, char** argv) {
 		);
 		
 		calc_stop_flag(&local_data, iteration_passed);
+
 		//Был получен флаг останова длины iteration_passed в local_data.stopper
 
-		// V ceil() <math.h>
 		int block_stopper_size;
 		if(((double)iteration_passed/size) != (block_stopper_size = iteration_passed/size)){
 			++block_stopper_size;
@@ -393,16 +296,15 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	ASSERT_SUCCEED(
-		MPI_Gatherv(local_data.data+local_data.size_x, sizes[rank], MatString,
-			field_full, sizes, offsets, MatString, 0, cartComm)
-	);
+	local_field_begin = local_data.data+local_data.size_x;
+	integer_to_ascii(local_field_begin, n_elements_in_localdata_without_extra_str);
 
-	if (rank == 0)
-		write_matrix(field_full, size_fld, argv[3]);
-
-	if (rank == 0)
-		free(field_full);
+	char caret = '\n';
+	for(int i = 1; i <= sizes[rank]; ++i){
+		ASSERT_SUCCEED(MPI_File_write(outfile, local_data.data+local_data.size_x*i, 
+									local_data.size_x, MPI_CHAR, MPI_STATUS_IGNORE));
+		ASSERT_SUCCEED(MPI_File_write(outfile, &caret, 1, MPI_CHAR, MPI_STATUS_IGNORE));
+	}
 
 	free(local_data.data);
 	free(local_data.stopper);
@@ -416,12 +318,14 @@ int main(int argc, char** argv) {
 	free(sizes);
 	free(offsets);
 	free(stopper_distributed_alltoall);
-	*/
 
 	MPI_Type_free(&fileType);
+
+	ASSERT_SUCCEED(MPI_Type_free(&MatString));
+
+
 	ASSERT_SUCCEED(MPI_File_close(&infile));
 	ASSERT_SUCCEED(MPI_File_close(&outfile));
-	ASSERT_SUCCEED(MPI_Type_free(&MatString));
 
 	ASSERT_SUCCEED(MPI_Finalize());
 
