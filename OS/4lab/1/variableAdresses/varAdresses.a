@@ -1,0 +1,478 @@
+	.file	"varAdresses.c"
+	.text
+	.globl	globalInit
+	.data
+	.align 4
+	.type	globalInit, @object
+	.size	globalInit, 4
+globalInit:
+	.long	1234
+	.comm	globalUninit,4,4
+	.globl	globalConst
+	.section	.rodata
+	.align 4
+	.type	globalConst, @object
+	.size	globalConst, 4
+globalConst:
+	.long	2345
+.LC0:
+	.string	"-"
+.LC1:
+	.string	"P : localStackVar: %p\n"
+	.text
+	.globl	ptr_inside_func
+	.type	ptr_inside_func, @function
+ptr_inside_func:
+.LFB6:
+	.cfi_startproc
+	endbr64
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register 6
+	subq	$32, %rsp
+	movq	%fs:40, %rax
+	movq	%rax, -8(%rbp)
+	xorl	%eax, %eax
+	leaq	.LC0(%rip), %rdi
+	call	puts@PLT
+	movl	$404, -20(%rbp)
+	leaq	-20(%rbp), %rax
+	movq	%rax, %rsi
+	leaq	.LC1(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	leaq	-20(%rbp), %rax
+	movq	%rax, -16(%rbp)
+	movq	-16(%rbp), %rax
+	movq	-8(%rbp), %rdx
+	xorq	%fs:40, %rdx
+	je	.L3
+	call	__stack_chk_fail@PLT
+.L3:
+	leave
+	.cfi_def_cfa 7, 8
+	ret
+	.cfi_endproc
+.LFE6:
+	.size	ptr_inside_func, .-ptr_inside_func
+	.section	.rodata
+.LC2:
+	.string	"P : anotherLocalStackVar: %p\n"
+	.text
+	.globl	ptr_inside_another_func
+	.type	ptr_inside_another_func, @function
+ptr_inside_another_func:
+.LFB7:
+	.cfi_startproc
+	endbr64
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register 6
+	subq	$32, %rsp
+	movq	%fs:40, %rax
+	movq	%rax, -8(%rbp)
+	xorl	%eax, %eax
+	leaq	.LC0(%rip), %rdi
+	call	puts@PLT
+	movl	$200, -20(%rbp)
+	leaq	-20(%rbp), %rax
+	movq	%rax, %rsi
+	leaq	.LC2(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	leaq	-20(%rbp), %rax
+	movq	%rax, -16(%rbp)
+	movq	-16(%rbp), %rax
+	movq	-8(%rbp), %rdx
+	xorq	%fs:40, %rdx
+	je	.L6
+	call	__stack_chk_fail@PLT
+.L6:
+	leave
+	.cfi_def_cfa 7, 8
+	ret
+	.cfi_endproc
+.LFE7:
+	.size	ptr_inside_another_func, .-ptr_inside_another_func
+	.section	.rodata
+	.align 8
+.LC3:
+	.string	"P : static var inside func: %p \n"
+	.align 8
+.LC4:
+	.string	"P : static var inside func uninitialized: %p \n"
+	.align 8
+.LC5:
+	.string	"V : static var 1 inside func: %d \n"
+	.align 8
+.LC6:
+	.string	"V : static var 2 inside func: %d \n"
+	.text
+	.globl	static_in_func
+	.type	static_in_func, @function
+static_in_func:
+.LFB8:
+	.cfi_startproc
+	endbr64
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register 6
+	subq	$16, %rsp
+	leaq	.LC0(%rip), %rdi
+	call	puts@PLT
+	movl	$16, %edi
+	call	malloc@PLT
+	movq	%rax, -8(%rbp)
+	leaq	staticVar.3568(%rip), %rsi
+	leaq	.LC3(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	leaq	staticVarUninit.3569(%rip), %rsi
+	leaq	.LC4(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movl	staticVar.3568(%rip), %eax
+	movl	%eax, %esi
+	leaq	.LC5(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movl	staticVarUninit.3569(%rip), %eax
+	movl	%eax, %esi
+	leaq	.LC6(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movq	-8(%rbp), %rax
+	leaq	staticVar.3568(%rip), %rdx
+	movq	%rdx, (%rax)
+	movq	-8(%rbp), %rax
+	addq	$8, %rax
+	leaq	staticVarUninit.3569(%rip), %rdx
+	movq	%rdx, (%rax)
+	movq	-8(%rbp), %rax
+	leave
+	.cfi_def_cfa 7, 8
+	ret
+	.cfi_endproc
+.LFE8:
+	.size	static_in_func, .-static_in_func
+	.section	.rodata
+	.align 8
+.LC7:
+	.string	"P : const var inside func: %p \n"
+	.align 8
+.LC8:
+	.string	"P : const var inside func uninitialized: %p \n"
+	.align 8
+.LC9:
+	.string	"V : const var 1 inside func: %d \n"
+	.align 8
+.LC10:
+	.string	"V : const var 2 inside func: %d \n"
+	.text
+	.globl	const_in_func
+	.type	const_in_func, @function
+const_in_func:
+.LFB9:
+	.cfi_startproc
+	endbr64
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register 6
+	subq	$32, %rsp
+	movq	%fs:40, %rax
+	movq	%rax, -8(%rbp)
+	xorl	%eax, %eax
+	leaq	.LC0(%rip), %rdi
+	call	puts@PLT
+	movl	$16, %edi
+	call	malloc@PLT
+	movq	%rax, -16(%rbp)
+	movl	$100, -24(%rbp)
+	leaq	-24(%rbp), %rax
+	movq	%rax, %rsi
+	leaq	.LC7(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	leaq	-20(%rbp), %rax
+	movq	%rax, %rsi
+	leaq	.LC8(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movl	-24(%rbp), %eax
+	movl	%eax, %esi
+	leaq	.LC9(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movl	-20(%rbp), %eax
+	movl	%eax, %esi
+	leaq	.LC10(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movq	-16(%rbp), %rax
+	leaq	-24(%rbp), %rdx
+	movq	%rdx, (%rax)
+	movq	-16(%rbp), %rax
+	leaq	8(%rax), %rdx
+	leaq	-20(%rbp), %rax
+	movq	%rax, (%rdx)
+	movq	-16(%rbp), %rax
+	movq	-8(%rbp), %rcx
+	xorq	%fs:40, %rcx
+	je	.L11
+	call	__stack_chk_fail@PLT
+.L11:
+	leave
+	.cfi_def_cfa 7, 8
+	ret
+	.cfi_endproc
+.LFE9:
+	.size	const_in_func, .-const_in_func
+	.globl	clean_stack
+	.type	clean_stack, @function
+clean_stack:
+.LFB10:
+	.cfi_startproc
+	endbr64
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register 6
+	movl	$0, -8(%rbp)
+	jmp	.L13
+.L14:
+	movl	-8(%rbp), %eax
+	addl	$100, %eax
+	movl	%eax, -4(%rbp)
+	addl	$1, -8(%rbp)
+.L13:
+	cmpl	$49, -8(%rbp)
+	jle	.L14
+	nop
+	nop
+	popq	%rbp
+	.cfi_def_cfa 7, 8
+	ret
+	.cfi_endproc
+.LFE10:
+	.size	clean_stack, .-clean_stack
+	.section	.rodata
+.LC11:
+	.string	"PID: %d\n"
+.LC12:
+	.string	"LOCAL VARIABLES:\n"
+	.align 8
+.LC13:
+	.string	"  P : ptrToLocalVarFromFunc: %p \n"
+	.align 8
+.LC14:
+	.string	"  V : value by ptr from 1 func: %d \n"
+	.align 8
+.LC15:
+	.string	"  P : anotherPtrToLocalVarFrFunc: %p\n"
+	.align 8
+.LC16:
+	.string	"  V : value by ptr from 2 func: %d \n"
+.LC17:
+	.string	"\nSTATIC VARIABLES:\n"
+	.align 8
+.LC18:
+	.string	"  V : static var outside func %p \n"
+	.align 8
+.LC19:
+	.string	"  V : static var outside func uninitialized %p \n"
+.LC20:
+	.string	"\nCONSTANTS FUNC:\n"
+	.align 8
+.LC21:
+	.string	"  V : const var outside func %p \n"
+	.align 8
+.LC22:
+	.string	"  V : const var outside func uninitialized %p \n"
+	.align 8
+.LC23:
+	.string	"Here is the call of ptr_inside_func, it will assign to some ptr value 404"
+.LC24:
+	.string	"\nGLOBAL:\n"
+.LC25:
+	.string	"P : global init %p\n"
+.LC26:
+	.string	"P : global uninit %p\n"
+.LC27:
+	.string	"P : global const %p\n"
+	.text
+	.globl	main
+	.type	main, @function
+main:
+.LFB11:
+	.cfi_startproc
+	endbr64
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register 6
+	subq	$32, %rsp
+	call	getpid@PLT
+	movl	%eax, -28(%rbp)
+	movl	-28(%rbp), %eax
+	movl	%eax, %esi
+	leaq	.LC11(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	leaq	.LC12(%rip), %rdi
+	call	puts@PLT
+	movl	$0, %eax
+	call	ptr_inside_func
+	movq	%rax, -24(%rbp)
+	movq	-24(%rbp), %rax
+	movq	%rax, %rsi
+	leaq	.LC13(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movq	-24(%rbp), %rax
+	movl	(%rax), %eax
+	movl	%eax, %esi
+	leaq	.LC14(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movl	$0, %eax
+	call	ptr_inside_another_func
+	movq	%rax, -16(%rbp)
+	movq	-16(%rbp), %rax
+	movq	%rax, %rsi
+	leaq	.LC15(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movq	-16(%rbp), %rax
+	movl	(%rax), %eax
+	movl	%eax, %esi
+	leaq	.LC16(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movq	-24(%rbp), %rax
+	movl	(%rax), %eax
+	movl	%eax, %esi
+	leaq	.LC14(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	leaq	.LC17(%rip), %rdi
+	call	puts@PLT
+	movl	$0, %eax
+	call	static_in_func
+	movq	%rax, -8(%rbp)
+	movq	-8(%rbp), %rax
+	movq	(%rax), %rax
+	movq	%rax, %rsi
+	leaq	.LC18(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movq	-8(%rbp), %rax
+	addq	$8, %rax
+	movq	(%rax), %rax
+	movq	%rax, %rsi
+	leaq	.LC19(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movq	-8(%rbp), %rax
+	movq	(%rax), %rax
+	movl	$1024, (%rax)
+	movq	-8(%rbp), %rax
+	addq	$8, %rax
+	movq	(%rax), %rax
+	movl	$550, (%rax)
+	movl	$0, %eax
+	call	static_in_func
+	movq	%rax, -8(%rbp)
+	leaq	.LC20(%rip), %rdi
+	call	puts@PLT
+	movl	$0, %eax
+	call	const_in_func
+	movq	%rax, -8(%rbp)
+	movq	-8(%rbp), %rax
+	movq	(%rax), %rax
+	movq	%rax, %rsi
+	leaq	.LC21(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movq	-8(%rbp), %rax
+	addq	$8, %rax
+	movq	(%rax), %rax
+	movq	%rax, %rsi
+	leaq	.LC22(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movq	-8(%rbp), %rax
+	movq	(%rax), %rax
+	movl	$1024, (%rax)
+	movq	-8(%rbp), %rax
+	addq	$8, %rax
+	movq	(%rax), %rax
+	movl	$550, (%rax)
+	movl	$0, %eax
+	call	const_in_func
+	movq	%rax, -8(%rbp)
+	leaq	.LC23(%rip), %rdi
+	call	puts@PLT
+	movl	$0, %eax
+	call	ptr_inside_func
+	movl	$0, %eax
+	call	const_in_func
+	movq	%rax, -8(%rbp)
+	leaq	.LC24(%rip), %rdi
+	call	puts@PLT
+	leaq	globalInit(%rip), %rsi
+	leaq	.LC25(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	leaq	globalUninit(%rip), %rsi
+	leaq	.LC26(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	leaq	globalConst(%rip), %rsi
+	leaq	.LC27(%rip), %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	movl	$300, %edi
+	call	sleep@PLT
+	movl	$0, %eax
+	leave
+	.cfi_def_cfa 7, 8
+	ret
+	.cfi_endproc
+.LFE11:
+	.size	main, .-main
+	.data
+	.align 4
+	.type	staticVar.3568, @object
+	.size	staticVar.3568, 4
+staticVar.3568:
+	.long	100
+	.local	staticVarUninit.3569
+	.comm	staticVarUninit.3569,4,4
+	.ident	"GCC: (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0"
+	.section	.note.GNU-stack,"",@progbits
+	.section	.note.gnu.property,"a"
+	.align 8
+	.long	 1f - 0f
+	.long	 4f - 1f
+	.long	 5
+0:
+	.string	 "GNU"
+1:
+	.align 8
+	.long	 0xc0000002
+	.long	 3f - 2f
+2:
+	.long	 0x3
+3:
+	.align 8
+4:
