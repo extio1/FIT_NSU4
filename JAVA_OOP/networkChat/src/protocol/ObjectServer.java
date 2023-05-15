@@ -1,4 +1,4 @@
-package protocol.serverObject;
+package protocol;
 
 public interface ObjectServer {
 }

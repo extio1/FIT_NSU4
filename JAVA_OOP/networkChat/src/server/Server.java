@@ -1,5 +1,6 @@
 package server;
 
+import protocol.ObjectServer;
 import server.clientHandler.factory.HandlerFactory;
 import server.clientHandler.factory.Implementations;
 
@@ -26,40 +27,48 @@ public class Server extends Thread{
         readConfig(configPath);
         socket = new ServerSocket(configuration.port);
         this.start();
+
         System.out.println("Server launched: "+socket.getLocalSocketAddress()+" port "+socket.getLocalPort());
     }
 
-    public void doBroadcast(Object msg){
+    public void doBroadcast(ObjectServer msg){
         for(ClientHandler ch: clientHandlers) {
             ch.send(msg);
         }
+    }
+
+    public void shutdown(){
+        this.interrupt();
+        closeSocket();
+        for(ClientHandler handler : clientHandlers)
+            handler.shutdown();
     }
 
     @Override
     public void run() {
         while(!Thread.interrupted()){
             try {
-                Socket clientSocket = socket.accept();
-                clientHandlers.add(handlerFactory.doMakeHandler(
-                        Implementations.SERIALIZE, clientSocket,
-                        this, clientHandlers.size()));
+                while(!Thread.interrupted()) {
+                    Socket clientSocket = socket.accept();
+                    clientHandlers.add(handlerFactory.doMakeHandler(
+                            configuration.implementation, clientSocket,
+                            this, clientHandlers.size()));
+                }
             } catch (IOException e) {
                 System.out.println(e.getMessage());
             } finally {
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    System.out.println(e.getMessage());
-                }
+                closeSocket();
             }
         }
+        closeSocket();
+    }
 
+    private void closeSocket(){
         try {
             socket.close();
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
-
     }
 
     private record ServerConfiguration(

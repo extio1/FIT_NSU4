@@ -1,4 +1,6 @@
 package protocol.userObject;
 
-public interface DetachUser extends ObjectUser {
+import protocol.Request;
+
+public interface DetachUser extends Request {
 }

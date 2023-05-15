@@ -1,5 +1,8 @@
 package server;
 
-public abstract class ClientHandler extends Thread {
-    protected abstract void send(Object msg);
+import protocol.ObjectServer;
+
+public interface ClientHandler {
+    void send(ObjectServer msg);
+    void shutdown();
 }

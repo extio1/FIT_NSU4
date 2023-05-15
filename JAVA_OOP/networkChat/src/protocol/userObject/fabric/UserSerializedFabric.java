@@ -1,25 +1,29 @@
 package protocol.userObject.fabric;
 
 import protocol.userObject.*;
+import protocol.userObject.serialization.DetachUserSerialized;
+import protocol.userObject.serialization.ListUserSerialized;
+import protocol.userObject.serialization.MessageUserSerialized;
+import protocol.userObject.serialization.RegisterUserSerialized;
 
 public class UserSerializedFabric implements UserMessageFabric {
     @Override
     public DetachUser makeDetachUser() {
-        return null;
+        return new DetachUserSerialized();
     }
 
     @Override
     public ListUser makeListUser() {
-        return null;
+        return new ListUserSerialized();
     }
 
     @Override
     public MessageUser makeMessageUser(String message) {
-        return null;
+        return new MessageUserSerialized(message);
     }
 
     @Override
     public RegisterUser makeRegisterUser(String name) {
-        return null;
+        return new RegisterUserSerialized(name);
     }
 }

@@ -1,4 +1,6 @@
 package protocol.userObject;
 
-public interface MessageUser extends ObjectUser{
+import protocol.Request;
+
+public interface MessageUser extends Request {
 }

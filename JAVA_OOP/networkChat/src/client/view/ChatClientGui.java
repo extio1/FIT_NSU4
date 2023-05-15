@@ -5,12 +5,15 @@ import client.Client;
 import javax.swing.*;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.io.IOException;
 
 public class ChatClientGui extends JFrame{
     private JTextArea userInputTextField;
     private final Client client;
 
     public ChatClientGui(Client client){
+        String username = JOptionPane.showInputDialog(this, "Enter your name:");
+
         this.client = client;
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowListener() {
@@ -43,5 +46,12 @@ public class ChatClientGui extends JFrame{
             public void windowDeactivated(WindowEvent e) {
             }
         });
+
+        try {
+            client.registerNewUser(username);
+        } catch (IOException | InterruptedException e){
+            System.out.println(e.getMessage());
+        }
+
     }
 }

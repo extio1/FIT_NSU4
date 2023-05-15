@@ -1,4 +1,6 @@
 package protocol.userObject;
 
-public interface RegisterUser extends ObjectUser{
+import protocol.Request;
+
+public interface RegisterUser extends Request {
 }

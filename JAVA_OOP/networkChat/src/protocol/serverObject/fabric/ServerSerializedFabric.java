@@ -1,9 +1,9 @@
 package protocol.serverObject.fabric;
 
 import protocol.serverObject.DetachedUserServer;
-import protocol.serverObject.ErrorAnswerServer;
+import protocol.serverObject.response.ErrorAnswerServer;
 import protocol.serverObject.ServerMessageFabric;
-import protocol.serverObject.SuccessAnswerServer;
+import protocol.serverObject.response.SuccessAnswerServer;
 
 public class ServerSerializedFabric implements ServerMessageFabric {
     @Override
@@ -22,7 +22,7 @@ public class ServerSerializedFabric implements ServerMessageFabric {
     }
 
     @Override
-    public SuccessAnswerServer makeSuccessAnswer() {
+    public SuccessAnswerServer makeSuccessAnswer(long succeedId) {
         return null;
     }
 }
