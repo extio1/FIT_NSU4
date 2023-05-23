@@ -1,0 +1,35 @@
+May 23, 2023 10:36:32 AM server.logger.LoggerServer makeLog
+INFO: Server launched: 0.0.0.0/0.0.0.0:3500 port 3500
+May 23, 2023 10:36:33 AM server.logger.LoggerServer makeLog
+INFO: New client accepted, working on socket port 61258
+May 23, 2023 10:36:43 AM server.logger.LoggerServer makeLog
+INFO: Request from <null>
+type:protocol.userObject.serialization.RegisterUserSerialized@6744eb3d
+(0 id request)
+May 23, 2023 10:36:43 AM server.logger.LoggerServer makeLog
+INFO: Send response to <null>
+type:protocol.serverObject.serialization.ErrorAnswerServerSerialized@20ba0a96
+(time23-05-2023 10:36:43)
+(0id)
+May 23, 2023 10:36:47 AM server.logger.LoggerServer makeLog
+INFO: Request from <null>
+type:protocol.userObject.serialization.MessageUserSerialized@114a9599
+(1 id request)
+May 23, 2023 10:36:47 AM server.logger.LoggerServer makeLog
+INFO: Send response to <null>
+type:protocol.serverObject.serialization.ErrorAnswerServerSerialized@2c6b9032
+(time23-05-2023 10:36:47)
+(1id)
+May 23, 2023 10:37:33 AM server.logger.LoggerServer makeLog
+INFO: Request from <null>
+type:protocol.userObject.serialization.DetachUserSerialized@593783d6
+(2 id request)
+May 23, 2023 10:37:33 AM server.logger.LoggerServer makeLog
+INFO: Send response to <null>
+type:protocol.serverObject.serialization.ErrorAnswerServerSerialized@5f6d7c15
+(time23-05-2023 10:37:33)
+(2id)
+May 23, 2023 10:37:35 AM server.logger.LoggerServer makeLog
+SEVERE: Socket closed
+May 23, 2023 10:37:35 AM server.logger.LoggerServer makeLog
+INFO: Server shutdown
