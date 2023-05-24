@@ -233,7 +233,7 @@ int main(int argc, char** argv){
 	pos_begin_task = rank*N_TASK_FOR_EACH;
 	counter_task = pos_begin_task;
 
-	float jobResult = 0;
+	double jobResult = 0;
 
 	int taskWeight;
 	taskList = (int*)malloc(sizeof(int)*N_TASK_FOR_EACH*size);
@@ -258,6 +258,10 @@ int main(int argc, char** argv){
 
 	printf("%d DONE!! %f \n", rank, jobResult);
 
+	double result;
+	MPI_Reduce(&jobResult, &result, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	if(rank == 0)
+		printf("!!!!!!!!!!!!!!!!! result: %f\n", result);
 
 	pthread_kill(contributer, SIGINT);
 	pthread_kill(asker, SIGINT);
