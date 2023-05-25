@@ -9,12 +9,13 @@
 #include <signal.h>
 #include <string.h>
 #include <cassert>
+#include <limits.h>
 
-#define LEN_LIST 2
-#define N_TASK_FOR_EACH 100
+#define LEN_LIST 15
+#define N_TASK_FOR_EACH 2000
 #define SENSITIVITY 5
 
-#define L 10
+#define L 100
 
 #define POSIX_SUCCEED(func) if(func == -1) {perror("func() error"); exit(-1);}
 
@@ -31,9 +32,6 @@ const int managerRank = 0;
 
 int glob_iter_counter;
 pthread_mutex_t taskListMutex;
-pthread_mutex_t newTasksMutex;
-
-pthread_cond_t newTasksCond;
 
 int new_tasks_ready = 0;
 
@@ -42,31 +40,32 @@ int load_counter = N_TASK_FOR_EACH;
 int new_load_counter;
 int counter_task;
 
-void print_task_list(){
-	printf("rank: %d\n", rank);
-	for(int i = 0; i < size*N_TASK_FOR_EACH; ++i){
-		printf("%d ", taskList[i]);
-	}
-	printf("\n");
-}
-
-void print_array(const int* arr, int size){
-	for(int i = 0; i < size; ++i){
-		printf("%d ", arr[i]);
-	}
-	printf("\n");
-}
-
-void print_array_from_size(const int* arr, const size_t a, const size_t size){
-	printf("%d rank :", rank);
-	for(int i = a; i < a+size; ++i){
-		printf("%d ", arr[i]);
-	}
-	printf("\n");
-}
-
 void sigusr_contibuter_handler(int signal){
 	exit(0);
+}
+
+void print_disbalance_params(int duration, MPI_Comm comm){
+	int main_worker_rank = 1;
+	int workers_size = size-1;
+	int durs[workers_size];
+	MPI_Gather(&duration, 1, MPI_DOUBLE, durs, 1, MPI_DOUBLE, main_worker_rank, comm);
+
+	double max_diff = 0;
+	double max_dur = 0;
+	if(rank == main_worker_rank){
+		for(int i = 0; i < workers_size; ++i){
+			for(int j = i; j < workers_size; ++j){
+				double diff = abs(durs[i]-durs[j]);
+				if(diff > max_diff)
+					max_diff = diff;
+			}
+
+			if(durs[i] > max_dur)
+				max_dur = durs[i];
+		}
+		printf("[%d] iteration: max diff %f\n", rank, max_diff);
+		printf("[%d] iteration: diabalance proportion %f %%\n\n", rank, max_dur/max_diff*100);
+	}
 }
 
 void generate_task_list(){
@@ -74,8 +73,7 @@ void generate_task_list(){
 	load_counter = N_TASK_FOR_EACH;
 	counter_task = pos_begin_task;
 	for(int i = 0; i < N_TASK_FOR_EACH*size; ++i){
-		//taskList[i] = abs(N_TASK_FOR_EACH/2-i%N_TASK_FOR_EACH) * abs(rank-(glob_iter_counter%size)) * L;
-		taskList[i] = ((i%N_TASK_FOR_EACH+1));
+		taskList[i] = abs(N_TASK_FOR_EACH/2-i%N_TASK_FOR_EACH) * abs(rank-(glob_iter_counter%size)) * L;
 	}
 	pthread_mutex_unlock(&taskListMutex);
 }
@@ -94,23 +92,6 @@ void get_rank_by_max_load(const int* load, int* maxRank, int* weight){
 }
 
 int n_new_tasks = -1;
-void* reciever_routine(void* b){
-	signal(SIGUSR1, sigusr_contibuter_handler);
-/*
-	while(1){
-		MPI_Recv(&n_new_tasks, 1, MPI_INT, MPI_ANY_SOURCE, SEND_TASKS_SIZE_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		MPI_Recv(tempList, n_new_tasks, MPI_INT, MPI_ANY_SOURCE, SEND_TASKS_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-		counter_task = pos_begin_task;
-		load_counter = n_new_tasks;
-
-		new_tasks_ready = 1;
-		pthread_cond_signal(&newTasksCond);
-	}
-*/
-	return NULL;
-}
-
 void get_new_task(int* weight){
 	pthread_mutex_lock(&taskListMutex);
 
@@ -203,6 +184,8 @@ void manager(){
 		int sendingInfo[2] = {sendingRank, nSendingTasks};
 		MPI_Bcast(sendingInfo, 2, MPI_INT, managerRank, MPI_COMM_WORLD);
 	}
+
+	MPI_Finalize();
 }
 
 int main(int argc, char** argv){
@@ -217,21 +200,16 @@ int main(int argc, char** argv){
 
 	if(rank == 0) manager();
 
-	pthread_t contributer, reciever;
+	pthread_t contributer;
 	POSIX_SUCCEED(pthread_create(&contributer, NULL, contributer_routine, NULL));
-	POSIX_SUCCEED(pthread_create(&reciever, NULL, reciever_routine, NULL));
 	POSIX_SUCCEED(pthread_detach(contributer));
-	POSIX_SUCCEED(pthread_detach(reciever));
-	
-	POSIX_SUCCEED(pthread_cond_init(&newTasksCond, NULL));
 
-	POSIX_SUCCEED(pthread_mutex_init(&newTasksMutex, NULL));
 	POSIX_SUCCEED(pthread_mutex_init(&taskListMutex, NULL));
 
 	pos_begin_task = rank*N_TASK_FOR_EACH;
 	counter_task = pos_begin_task;
 
-	int c = 0;
+	double prog_start, prog_end;
 
 	double jobResult = 0;
 
@@ -239,8 +217,12 @@ int main(int argc, char** argv){
 	taskList = (int*)malloc(sizeof(int)*N_TASK_FOR_EACH*size);
 	tempList = (int*)malloc(sizeof(int)*N_TASK_FOR_EACH);
 
+	prog_start = MPI_Wtime();
+
 	for(glob_iter_counter = 0; glob_iter_counter < LEN_LIST; ++glob_iter_counter){
 		generate_task_list();
+		double start, finish;
+		start = MPI_Wtime();
 		while(1){
 			get_new_task(&taskWeight);
 			if(taskWeight < 0){
@@ -251,21 +233,31 @@ int main(int argc, char** argv){
 				jobResult += sin(i);
 			}
 		}
+		finish = MPI_Wtime();
+
+		double iter_duration = finish-start;
+		printf("%d rank: [%d] iteration takes %f sec.\n", rank, glob_iter_counter, iter_duration);
+		MPI_Barrier(proletariat_comm);
+		print_disbalance_params(iter_duration, proletariat_comm);
 		
 		MPI_Barrier(proletariat_comm);
 	}
 
-
+	prog_end = MPI_Wtime();
 
 	double result = 0;
-
 	MPI_Allreduce(&jobResult, &result, 1, MPI_DOUBLE, MPI_SUM, proletariat_comm);
-	if(rank == 1)
+	if(rank == 1){
 		printf("result: %f\n", result);
+		printf("-------------------------------\nGlobal program execution time: %fsec.\n", prog_end-prog_start);
+	}
+
 
 	POSIX_SUCCEED(pthread_kill(contributer, SIGUSR1));
-	POSIX_SUCCEED(pthread_kill(reciever, SIGUSR1));
 	POSIX_SUCCEED(pthread_mutex_destroy(&taskListMutex));
+
+	free(taskList);
+	free(tempList);
 
 	MPI_Finalize();
 
