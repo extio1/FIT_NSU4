@@ -12,10 +12,10 @@
 #include <limits.h>
 
 #define LEN_LIST 15
-#define N_TASK_FOR_EACH 2000
+#define N_TASK_FOR_EACH 200
 #define SENSITIVITY 5
 
-#define L 100
+#define L 15000
 
 #define POSIX_SUCCEED(func) if(func == -1) {perror("func() error"); exit(-1);}
 
@@ -44,18 +44,19 @@ void sigusr_contibuter_handler(int signal){
 	exit(0);
 }
 
-void print_disbalance_params(int duration, MPI_Comm comm){
+void print_disbalance_params(double duration, MPI_Comm comm){
 	int main_worker_rank = 1;
 	int workers_size = size-1;
-	int durs[workers_size];
-	MPI_Gather(&duration, 1, MPI_DOUBLE, durs, 1, MPI_DOUBLE, main_worker_rank, comm);
+
+	double durs[workers_size];
+	MPI_Allgather(&duration, 1, MPI_DOUBLE, durs, 1, MPI_DOUBLE, comm);
 
 	double max_diff = 0;
 	double max_dur = 0;
 	if(rank == main_worker_rank){
 		for(int i = 0; i < workers_size; ++i){
 			for(int j = i; j < workers_size; ++j){
-				double diff = abs(durs[i]-durs[j]);
+				double diff = fabs(durs[i]-durs[j]);
 				if(diff > max_diff)
 					max_diff = diff;
 			}
@@ -63,8 +64,9 @@ void print_disbalance_params(int duration, MPI_Comm comm){
 			if(durs[i] > max_dur)
 				max_dur = durs[i];
 		}
-		printf("[%d] iteration: max diff %f\n", rank, max_diff);
-		printf("[%d] iteration: diabalance proportion %f %%\n\n", rank, max_dur/max_diff*100);
+
+		printf("[%d] iteration: max diff %f\n", glob_iter_counter, max_diff);
+		printf("[%d] iteration: disbalance proportion %f %%\n\n", glob_iter_counter, max_diff/max_dur*100);
 	}
 }
 
