@@ -68,7 +68,7 @@ void generate_task_list(){
 	counter_task = pos_begin_task;
 	for(int i = 0; i < N_TASK_FOR_EACH*size; ++i){
 		//taskList[i] = abs(N_TASK_FOR_EACH/2-i%N_TASK_FOR_EACH) * abs(rank-(glob_iter_counter%size)) * L;
-		taskList[i] = ((i%N_TASK_FOR_EACH) * rank);
+		taskList[i] = ((i%N_TASK_FOR_EACH+1));
 	}
 	pthread_mutex_unlock(&taskListMutex);
 }
@@ -88,48 +88,57 @@ void get_rank_by_max_load(const int* load, int* maxRank, int* weight){
 
 // is was_request_for_new_tasks really need?
 
+void eof_transmit(int* weight){
+	counter_task = pos_begin_task;
+	load_counter = 0;
+	taskList[counter_task] = -1; 
+	*weight = -1;
+}
+
 void get_new_task(int* weight){
 
 	pthread_mutex_lock(&taskListMutex);
-/*	if(load_counter == 0){
-		*weight = -1;
-		pthread_mutex_unlock(&taskListMutex);
-		return;
-	}*/
 
 	if(load_counter <= 0){
+		printf("%d SDFSDFSDFSDF %d %d %d\n", rank, counter_task, new_tasks_was_required, load_counter);
 		if(new_tasks_was_required){
-				//pthread_mutex_lock(&newTasksReadyMutex);
-
+				pthread_mutex_lock(&newTasksReadyMutex);
 				if(!new_tasks_ready){
-					//pthread_mutex_unlock(&taskListMutex);
-					pthread_cond_wait(&new_tasks_ready_cond, &taskListMutex);
-					//pthread_mutex_lock(&taskListMutex);
+					printf("wait\n\n");
+					pthread_mutex_unlock(&taskListMutex);
+					pthread_cond_wait(&new_tasks_ready_cond, &newTasksReadyMutex);
+					pthread_mutex_lock(&taskListMutex);
+				}
+
+				printf("%d ggooott %d %d %d\n", rank, pos_begin_task, new_load_counter, taskList[pos_begin_task]);
+
+				if(new_load_counter == 0){
+					eof_transmit(weight);
+					pthread_mutex_unlock(&taskListMutex);
+					return;
 				}
 
 				new_tasks_ready = 0;
+				pthread_mutex_unlock(&newTasksReadyMutex);
+
 				new_tasks_was_required = 0;
 				counter_task = pos_begin_task;
 				load_counter = new_load_counter;
-
-				//pthread_mutex_unlock(&newTasksReadyMutex);
 		} else {
-			counter_task = pos_begin_task;
-			load_counter = 1;
-			*weight = -1;
+			eof_transmit(weight);
 			pthread_mutex_unlock(&taskListMutex);
 			return;
 		}
 	}
 
-	*weight = taskList[counter_task];
-
+	*weight = taskList[counter_task++];
+/*
 	if(counter_task >= pos_begin_task+N_TASK_FOR_EACH){
 		counter_task = pos_begin_task;
 	} else {
 		++counter_task;
 	}
-
+*/
 	--load_counter;
 
 	//pthread_mutex_lock(&initAskMutex);
@@ -155,13 +164,14 @@ void* asker_routine(void* d){
 		if(!new_tasks_was_required){
 			pthread_cond_wait(&task_left_eq_sens_cond, &taskListMutex);
 		}
+		printf("%d asker awaken\n", rank);
 		//pthread_mutex_unlock(&initAskMutex);
 		pthread_mutex_unlock(&taskListMutex);
 
 		int reqcounter;
 		for(int i = 0; i < size; ++i){
 			if(i != rank){
-				MPI_Send(&rank, 1, MPI_INT, i, ASK_TASKS_TAG, MPI_COMM_WORLD/*, &req[reqcounter++]*/);
+				MPI_Send(&rank, 1, MPI_INT, i, ASK_TASKS_TAG, MPI_COMM_WORLD);
 			}
 		}
 
@@ -174,22 +184,21 @@ void* asker_routine(void* d){
 		if(newNTasks > 0){
 			MPI_Recv(&taskList[pos_begin_task], newNTasks, MPI_INT,
 					recvFromRank, SEND_TASKS_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			printf("%d recv: ", rank);
 			new_load_counter = newNTasks;
+			print_array(&taskList[pos_begin_task], new_load_counter);
 		} else {
 			taskList[pos_begin_task] = -1;
-			new_load_counter = 1;
+			new_load_counter = 0;
 		}
-		counter_task = pos_begin_task;
 
 		pthread_mutex_lock(&newTasksReadyMutex);
 		new_tasks_ready = 1;
 		pthread_cond_signal(&new_tasks_ready_cond);
+		//printf("READY\n\n\n\n");
 		pthread_mutex_unlock(&newTasksReadyMutex);
 
 		pthread_mutex_unlock(&taskListMutex);
-
-		/*MPI_Waitall(size-1, req, MPI_STATUSES_IGNORE);*/
-
 	}
 }
 
@@ -210,28 +219,27 @@ void* contributer_routine(void* b){
 
 		if(sendingRank == rank && nSendingTasks > 0){
 			MPI_Send(&taskList[counter_task+load_counter-nSendingTasks+1], nSendingTasks,
-					MPI_INT, askingRank, SEND_TASKS_TAG, MPI_COMM_WORLD/*, &sendReq*/);
+					MPI_INT, askingRank, SEND_TASKS_TAG, MPI_COMM_WORLD);
+			print_array_from_size(taskList, counter_task+load_counter-nSendingTasks+1, nSendingTasks);
 			load_counter -= nSendingTasks;
+			printf("%d send: ", rank);
 		}
 
 		pthread_mutex_unlock(&taskListMutex);
-
-	/*	if(sendingRank == rank && nSendingTasks > 0)
-			MPI_Wait(&sendReq, MPI_STATUS_IGNORE);*/
 	}
 }
 
 pthread_attr_t attrAsker, attrContributer;
 void init_asker_thread(pthread_t* tid){
 	POSIX_SUCCEED(pthread_attr_init(&attrAsker));
-	POSIX_SUCCEED(pthread_attr_setdetachstate(&attrAsker, PTHREAD_CREATE_DETACHED));
-	POSIX_SUCCEED(pthread_create(tid, &attrAsker, asker_routine, NULL));
+	POSIX_SUCCEED(pthread_create(tid, NULL, asker_routine, NULL));
+	pthread_detach(*tid);
 }
 
 void init_contributer_thread(pthread_t* tid){
 	POSIX_SUCCEED(pthread_attr_init(&attrContributer));
-	POSIX_SUCCEED(pthread_attr_setdetachstate(&attrContributer, PTHREAD_CREATE_DETACHED));
-	POSIX_SUCCEED(pthread_create(tid, &attrContributer, contributer_routine, NULL));
+	POSIX_SUCCEED(pthread_create(tid, NULL, contributer_routine, NULL));
+	pthread_detach(*tid);
 }
 
 int main(int argc, char** argv){
@@ -256,40 +264,50 @@ int main(int argc, char** argv){
 
 	int c = 0;
 
-	double jobResult = 0;
+	unsigned long long jobResult = 0;
 
 	int taskWeight;
 	taskList = (int*)malloc(sizeof(int)*N_TASK_FOR_EACH*size);
+
 	for(glob_iter_counter = 0; glob_iter_counter < LEN_LIST; ++glob_iter_counter){
 		generate_task_list();
+
+		if(rank == 1){ printf("\nbegins\n"); print_array(taskList, N_TASK_FOR_EACH*size); printf("\nend\n");}
+
+		MPI_Barrier(MPI_COMM_WORLD);
 
 		while(1){
 			get_new_task(&taskWeight);
 			if(taskWeight < 0){
 				break;
 			}
-			usleep((rank+1)*5000);
+
 			++c;
-			for(int i = 0; i < taskWeight; ++i){
-				jobResult += sin(i);
-			}
-			
+			printf("(%d, %d) ", rank, taskWeight);
+			//for(int i = 0; i < taskWeight; ++i){
+			//usleep(1000*(rank%glob_iter_counter+1));
+				jobResult += taskWeight*1LL;
+			//}
 		}
 
-		//printf("%d OUT !!!!!!!%d iter!!!!\n", rank, glob_iter_counter);
+		printf("\n---------\n");
+
+		printf("%d OUT !!!!!!!%d iter!!!!\n", rank, glob_iter_counter);
 
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
 
-	printf("%d DONE!! %f %d %d\n", rank, jobResult, c, N_TASK_FOR_EACH);
+	printf("%d DONE!! %lld %d %d\n", rank, jobResult, c, N_TASK_FOR_EACH);
 
-	double result;
-	MPI_Reduce(&jobResult, &result, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	unsigned long long result;
+	MPI_Reduce(&jobResult, &result, 1, MPI_LONG_LONG_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 	if(rank == 0)
-		printf("!!!!!!!!!!!!!!!!! result: %f\n", result);
+		printf("!!!!!!!!!!!!!!!!! result: %lld\n", result);
 
-	pthread_kill(contributer, SIGINT);
-	pthread_kill(asker, SIGINT);
+	//pthread_kill(contributer, SIGINT);
+	//pthread_kill(asker, SIGINT);
+	pthread_cancel(contributer);
+	pthread_cancel(asker);
 
 	MPI_Finalize();
 
