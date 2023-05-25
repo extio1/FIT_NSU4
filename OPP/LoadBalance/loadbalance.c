@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
+#include <cassert>
 
 #define LEN_LIST 2
 #define N_TASK_FOR_EACH 100
@@ -83,7 +84,7 @@ void get_rank_by_max_load(const int* load, int* maxRank, int* weight){
 	int max = 0;
 
 	for(int i = 0; i < size; ++i){
-		if(load[i] > max){
+		if(load[i] >= max){
 			max = load[i];
 			*maxRank = i;
 		}
@@ -95,18 +96,18 @@ void get_rank_by_max_load(const int* load, int* maxRank, int* weight){
 int n_new_tasks = -1;
 void* reciever_routine(void* b){
 	signal(SIGUSR1, sigusr_contibuter_handler);
-
+/*
 	while(1){
 		MPI_Recv(&n_new_tasks, 1, MPI_INT, MPI_ANY_SOURCE, SEND_TASKS_SIZE_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		MPI_Recv(tempList, n_new_tasks, MPI_INT, MPI_ANY_SOURCE, SEND_TASKS_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-		pthread_mutex_lock(&newTasksMutex);
+		counter_task = pos_begin_task;
+		load_counter = n_new_tasks;
+
 		new_tasks_ready = 1;
 		pthread_cond_signal(&newTasksCond);
-		pthread_mutex_unlock(&newTasksMutex);
-
 	}
-
+*/
 	return NULL;
 }
 
@@ -115,23 +116,19 @@ void get_new_task(int* weight){
 
 	if(load_counter <= 0){
 		MPI_Send(&rank, 1, MPI_INT, managerRank, ASK_TASKS_TAG, MPI_COMM_WORLD);
-		
-		/*
-		pthread_mutex_lock(&newTasksMutex);
-		pthread_cond_wait(&newTasksCond, &newTasksMutex);
-		new_tasks_ready = 0;
-		pthread_mutex_unlock(&newTasksMutex);
-		*/
-		//printf("\n[%d]waiting\n", rank);
+
 		pthread_mutex_unlock(&taskListMutex);
 		MPI_Recv(&n_new_tasks, 1, MPI_INT, MPI_ANY_SOURCE, SEND_TASKS_SIZE_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		MPI_Recv(tempList, n_new_tasks, MPI_INT, MPI_ANY_SOURCE, SEND_TASKS_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);			
+		MPI_Recv(tempList, n_new_tasks, MPI_INT, MPI_ANY_SOURCE, SEND_TASKS_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		pthread_mutex_lock(&taskListMutex);
 
-		printf("GOT NEW TASKS\n");
-		memcpy(&taskList[pos_begin_task], tempList, n_new_tasks);
+		for(int i = 0; i < n_new_tasks; ++i){
+			taskList[pos_begin_task+i] = tempList[i];
+		}
+
 		counter_task = pos_begin_task;
 		load_counter = n_new_tasks;
+
 	}
 
 	*weight = taskList[counter_task++];
@@ -146,34 +143,28 @@ void foo(int* loadStat){
 
 void* contributer_routine(void* b){
 	signal(SIGUSR1, sigusr_contibuter_handler);
-	int* loadStat;
 
 	while(1){
 		int askingRank = -1;
-		printf("\n0 |  %d got req for %d\n", rank, askingRank);	
 		MPI_Bcast(&askingRank, 1, MPI_INT, managerRank, MPI_COMM_WORLD);
 		if(askingRank == rank){
-			printf("\n%d eq %d\n", rank, askingRank);
-			int zero = 0;
-			MPI_Gather(&zero, 1, MPI_INT, NULL, 0, MPI_DATATYPE_NULL, managerRank, MPI_COMM_WORLD);	
+			int ignore_asking_proc_size = -1;
+			int ignore_info[2];
+			MPI_Gather(&ignore_asking_proc_size, 1, MPI_INT, NULL, 0, MPI_DATATYPE_NULL, managerRank, MPI_COMM_WORLD);
+			MPI_Bcast(ignore_info, 2, MPI_INT, managerRank, MPI_COMM_WORLD);	
 			continue;
 		}
 
-printf("\n1 |  %d got req for %d\n", rank, askingRank);	
 
 		pthread_mutex_lock(&taskListMutex);
-printf("\n%d mutex\n", rank);
 		MPI_Gather(&load_counter, 1, MPI_INT, NULL, 0, MPI_DATATYPE_NULL, managerRank, MPI_COMM_WORLD);
-printf("\n2 |  %d got req for %d\n", rank, askingRank);
 
 		int sendingInfo[2];
 		MPI_Bcast(sendingInfo, 2, MPI_INT, managerRank, MPI_COMM_WORLD);
-printf("\n3 |  %d got req for %d\n", rank, askingRank);
 
 		int sending_rank = sendingInfo[0];
 		int n_sending_task = sendingInfo[1];
 		if(sending_rank == rank){
-			printf("\n4 |  %d sending for %d: %d\n", rank, askingRank, n_sending_task);
 			if(n_sending_task > 0){
 				MPI_Send(&n_sending_task, 1, 
 						MPI_INT, askingRank, SEND_TASKS_SIZE_TAG, MPI_COMM_WORLD);
@@ -197,23 +188,20 @@ printf("\n3 |  %d got req for %d\n", rank, askingRank);
 void manager(){
 	signal(SIGUSR1, sigusr_contibuter_handler);
 
+	int load_counter_manager = -1;
 	int askingRank = -1;
 	int loadStat[size];
 	while(1){
 		MPI_Recv(&askingRank, 1, MPI_INT, MPI_ANY_SOURCE, ASK_TASKS_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-printf("\n1menager for req from %d\n", askingRank);
 
 		MPI_Bcast(&askingRank, 1, MPI_INT, managerRank, MPI_COMM_WORLD);
-printf("\n2menager for req from %d\n", askingRank);
-		MPI_Gather(&load_counter, 1, MPI_INT, loadStat, 1, MPI_INT, managerRank, MPI_COMM_WORLD);
-printf("\n3menager for req from %d\n", askingRank);
+		MPI_Gather(&load_counter_manager, 1, MPI_INT, loadStat, 1, MPI_INT, managerRank, MPI_COMM_WORLD);
 
 		int sendingRank = 0, nSendingTasks = 0;
 		get_rank_by_max_load(loadStat, &sendingRank, &nSendingTasks);
-printf("\n4menager for req from %d: %d %d\n", askingRank, sendingRank, nSendingTasks);
-		int sendingInfo[2] = {sendingRank+1, nSendingTasks};
+
+		int sendingInfo[2] = {sendingRank, nSendingTasks};
 		MPI_Bcast(sendingInfo, 2, MPI_INT, managerRank, MPI_COMM_WORLD);
-printf("\n5menager for req from %d\n", askingRank);
 	}
 }
 
@@ -223,6 +211,9 @@ int main(int argc, char** argv){
 
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+	MPI_Comm proletariat_comm;
+	MPI_Comm_split(MPI_COMM_WORLD, (rank==0), rank, &proletariat_comm);
 
 	if(rank == 0) manager();
 
@@ -256,28 +247,25 @@ int main(int argc, char** argv){
 				break;
 			}
 
-			++c;
-			//printf("(%d, %d) ", rank, taskWeight);
 			for(int i = 0; i < taskWeight; ++i){
 				jobResult += sin(i);
 			}
 		}
-		printf("%d %d\n", rank, glob_iter_counter);
-
-		MPI_Barrier(MPI_COMM_WORLD);
+		
+		MPI_Barrier(proletariat_comm);
 	}
 
-	printf("%d DONE!! %f %d %d\n", rank, jobResult, c, N_TASK_FOR_EACH);
 
-	double result;
-	MPI_Reduce(&jobResult, &result, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-	
-	if(rank == 0)
-		printf("!!!!!!!!!!!!!!!!! result: %f\n", result);
 
+	double result = 0;
+
+	MPI_Allreduce(&jobResult, &result, 1, MPI_DOUBLE, MPI_SUM, proletariat_comm);
+	if(rank == 1)
+		printf("result: %f\n", result);
 
 	POSIX_SUCCEED(pthread_kill(contributer, SIGUSR1));
-	//POSIX_SUCCEED(pthread_mutex_destroy(&taskListMutex));
+	POSIX_SUCCEED(pthread_kill(reciever, SIGUSR1));
+	POSIX_SUCCEED(pthread_mutex_destroy(&taskListMutex));
 
 	MPI_Finalize();
 
