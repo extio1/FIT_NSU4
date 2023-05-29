@@ -1,6 +1,7 @@
 package protocol;
 
-import protocol.serverObject.VisitorServer;
+
+import protocol.visitor.VisitorServer;
 
 import java.io.Serializable;
 

@@ -1,8 +1,7 @@
 package server;
 
+import exception.UnknownImplementationException;
 import protocol.ObjectServer;
-import server.clientHandler.factory.HandlerFactory;
-import server.clientHandler.factory.Implementations;
 import server.logger.LoggerServer;
 
 import java.io.FileInputStream;
@@ -15,9 +14,11 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 public class Server extends Thread{
+    private final static int ECHO_PORT = 7;
     private final List<ClientHandler> clientHandlers = new ArrayList<>();
     private ServerConfiguration configuration;
-    private final ServerSocket socket;
+    private final ServerSocket serverSocket;
+    private final ServerSocket serverEchoSocket;
     private final ChatContext context = new ChatContext();
     private final LoggerServer logger = new LoggerServer();
 
@@ -27,10 +28,12 @@ public class Server extends Thread{
 
     Server(String configPath) throws IOException {
         readConfig(configPath);
-        socket = new ServerSocket(configuration.port);
+        serverSocket = new ServerSocket(configuration.port);
+        serverEchoSocket = new ServerSocket(ECHO_PORT);
         this.start();
 
-        logger.makeLog(Level.INFO, "Server launched: "+socket.getLocalSocketAddress()+" port "+socket.getLocalPort());
+        logger.makeLog(Level.INFO, "Server launched: "+serverSocket.getLocalSocketAddress()+
+                "\n port "+serverSocket.getLocalPort()+"\n echo port "+serverEchoSocket.getLocalPort());
     }
 
     public void doBroadcast(ObjectServer msg){
@@ -55,6 +58,7 @@ public class Server extends Thread{
     public LoggerServer getLogger(){
         return logger;
     }
+    public ServerConfiguration getConfiguration() { return configuration; }
 
     public int getLastMessagesN(){
         return configuration.lastMessagesN;
@@ -64,16 +68,17 @@ public class Server extends Thread{
     public void run() {
         while(!Thread.interrupted()){
             try {
-                HandlerFactory handlerFactory = new HandlerFactory();
                 while(!Thread.interrupted()) {
-                    Socket clientSocket = socket.accept();
-                    clientSocket.setSoTimeout(configuration.timeout);
+                    Socket clientSocket = serverSocket.accept();
+                    Socket echoClientSocket = serverEchoSocket.accept();
+                    echoClientSocket.setSoTimeout(configuration.timeout);
 
-                    clientHandlers.add(
-                            handlerFactory.doMakeHandler(
-                            configuration.implementation, clientSocket,
-                            this, logger)
-                    );
+                    try {
+                        clientHandlers.add(new ClientHandler(clientSocket, echoClientSocket,
+                                this, configuration.implementation));
+                    } catch (IOException | UnknownImplementationException e){
+                        logger.makeLog(Level.SEVERE, e.getMessage());
+                    }
                 }
             } catch (IOException e) {
                 logger.makeLog(Level.SEVERE, e.getMessage());
@@ -86,15 +91,16 @@ public class Server extends Thread{
 
     private void closeSocket(){
         try {
-            socket.close();
+            serverSocket.close();
+            serverEchoSocket.close();
         } catch (IOException e) {
             logger.makeLog(Level.SEVERE, e.getMessage());
         }
     }
 
-    private record ServerConfiguration(
+    public record ServerConfiguration(
             int port,
-            Implementations implementation,
+            ImplementationServer implementation,
             int lastMessagesN,
             int timeout
     ){}
@@ -106,7 +112,7 @@ public class Server extends Thread{
             properties.load(file);
             configuration = new ServerConfiguration(
                     Integer.parseInt(properties.getProperty("port")),
-                    Implementations.valueOf(properties.getProperty("protocol")),
+                    ImplementationServer.valueOf(properties.getProperty("implementation")),
                     Integer.parseInt(properties.getProperty("history_size")),
                     Integer.parseInt(properties.getProperty("timeout"))
             );

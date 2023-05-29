@@ -2,7 +2,7 @@ package protocol;
 
 
 import client.ClientSessionData;
-import protocol.userObject.VisitorClient;
+import protocol.visitor.VisitorClient;
 
 import java.io.Serializable;
 

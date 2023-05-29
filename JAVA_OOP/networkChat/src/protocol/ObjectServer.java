@@ -1,6 +1,6 @@
 package protocol;
 
-import protocol.serverObject.VisitorServer;
+import protocol.visitor.VisitorServer;
 
 import java.io.Serializable;
 
@@ -14,5 +14,5 @@ public abstract class ObjectServer implements Serializable {
         return date;
     }
 
-    public abstract void accept(VisitorServer v);
+    public abstract void accept(VisitorServer visitorServer);
 }
