@@ -58,29 +58,5 @@ public class Main {
             }
         }
 
-
-
-/*
-        GsonBuilder gsonBuilderServer = new GsonBuilder();
-        JsonDeserializer<ObjectUser> deserializerServer = new JsonDeserializerObjUser();
-        gsonBuilderServer.registerTypeAdapter(new TypeToken<ObjectUser>(){}.getType(), deserializerServer);
-        Gson gsonServer = gsonBuilderServer.create();
-
-        DetachUserReq req = new DetachUserReq(false);
-        GsonBuilder gsonBuilderClient = new GsonBuilder();
-        JsonSerializer<ObjectUser> serializer = new JsonSerializerObjUser();
-        gsonBuilderClient.registerTypeAdapter(new TypeToken<DetachUserReq>(){}.getType(), serializer);
-
-        Gson gsonClient = gsonBuilderClient.create();
-        String jsonClt = gsonClient.toJson(req);
-
-        System.out.println(jsonClt);
-
-        ObjectUser obj = gsonServer.fromJson(jsonClt, ObjectUser.class);
-
-        DetachUserReq d = (DetachUserReq) obj;
-        System.out.println(d.isTimeout());
-        */
-
     }
 }
