@@ -17,7 +17,7 @@ public class ListUserReq extends ObjectUser implements Request {
     }
     public void handleServerResponse(Response r, ClientSessionData data) {
         if(r instanceof SuccessAnswerServerResp s){
-            data.setUserList(s.getUserList());
+            data.setUserList(s.getUserSet());
         } else if(r instanceof ErrorAnswerServerResp e){
             data.addError(e.toString(), e.getReason());
         }
