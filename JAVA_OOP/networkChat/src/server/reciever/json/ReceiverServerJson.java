@@ -17,6 +17,7 @@ import server.logger.LoggerServer;
 import server.reciever.ReceiverServer;
 
 import java.io.*;
+import java.net.SocketException;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 
@@ -52,6 +53,9 @@ public class ReceiverServerJson extends ReceiverServer {
                     obj.accept(visitor);
             } catch (IOException e) {
                 System.out.println("Rcvr srv "+e.getMessage());
+                if(e instanceof SocketException){
+                    break;
+                }
             }
         }
     }
