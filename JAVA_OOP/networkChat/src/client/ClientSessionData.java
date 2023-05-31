@@ -2,14 +2,12 @@ package client;
 
 import protocol.Request;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 public class ClientSessionData {
     private List<String[]> chatHistory = new ArrayList<>();
-    private List<String> userList = new ArrayList<>();
+    private Set<String> userList = new ConcurrentSkipListSet<>();
     private List<String[]> error =  new ArrayList<>();
     private volatile String nickname;
     private final Map<Long, Request> requestsWithoutAnswerYet = new HashMap<>();
@@ -41,8 +39,8 @@ public class ClientSessionData {
         return new ArrayList<>(chatHistory);
     }
 
-    synchronized public List<String> getUserList() {
-        return new ArrayList<>(userList);
+    synchronized public Set<String> getUserSet() {
+        return userList;
     }
 
     synchronized public String getClientName() {
@@ -64,7 +62,7 @@ public class ClientSessionData {
     }
 
 
-    synchronized public void setUserList(List<String> users) {
+    synchronized public void setUserList(Set<String> users) {
         userList = users;
         this.notifyAll();
     }
