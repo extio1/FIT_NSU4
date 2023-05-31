@@ -42,11 +42,11 @@ public class VisitorClient {
     }
     public void visitListUserRequest(ListUserReq r) {
         if(handler.getContext().getUserName() != null) {
-            if (server.getContext().getUserList() == null) {
+            if (server.getContext().getUserSet() == null) {
                 handler.send(fabric.makeErrorAnswer(r.getId(), "User list doesn't exist"));
             } else {
                 SuccessAnswerServerResp response = fabric.makeSuccessAnswer(r.getId());
-                response.setUserList(server.getContext().getUserList());
+                response.setUserList(server.getContext().getUserSet());
                 handler.send(response);
             }
         } else {
@@ -59,12 +59,7 @@ public class VisitorClient {
             if(!Objects.equals(handler.getContext().getUserName(), name))
                 handler.getContext().setUserName(name);
 
-            if(!server.getContext().getUserList().contains(name)) {
-                server.getContext().addUser(name);
-            } else {
-                handler.send(fabric.makeErrorAnswer(r.getId(), "User with the same nickname already exists"));
-                return;
-            }
+            server.getContext().addUser(name);
 
             MessageFromServerEv mess  = fabric.makeMessageFromServer(name+" join");
             server.getContext().addMsgServer(mess.getDate(), mess.getMessage());
@@ -74,6 +69,7 @@ public class VisitorClient {
             response.setUserName(name);
 
             server.doBroadcast(mess);
+            server.doBroadcast(fabric.makeAttachUserEvent(name));
             handler.send(response);
         } else {
             handler.send(fabric.makeErrorAnswer(r.getId(), "Wrong name format!"));
@@ -88,6 +84,7 @@ public class VisitorClient {
             server.getContext().addMsgServer(mess.getDate(), mess.getMessage());
 
             server.doBroadcast(mess);
+            server.doBroadcast(fabric.makeDetachedUserEvent(name));
 
             handler.send(fabric.makeSuccessAnswer(r.getId()));
             handler.shutdown();
