@@ -24,15 +24,13 @@ public class SenderClientJava extends SenderClient {
         while (!Thread.interrupted()) {
             try {
                 Request send = queue.take();
-                System.out.println(send);
                 data.addWaitingRequest(send);
                 out.writeObject(send);
-            } catch (IOException e) {
-                System.out.println("Sndr clt "+e.getMessage());
             } catch (InterruptedException e){
                 break;
+            } catch (IOException e) {
+                System.out.println("Sndr clt "+e.getMessage());
             }
-
         }
     }
 }
