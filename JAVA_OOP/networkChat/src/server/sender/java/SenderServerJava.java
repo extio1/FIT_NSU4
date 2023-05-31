@@ -2,6 +2,7 @@ package server.sender.java;
 
 import protocol.ObjectServer;
 import protocol.Response;
+import protocol.serverObject.response.SuccessAnswerServerResp;
 import server.ServerSessionContext;
 import server.logger.LoggerServer;
 import server.sender.SenderServer;
@@ -34,6 +35,10 @@ public class SenderServerJava extends SenderServer {
                 } else {
                     logger.makeLog(Level.INFO,
                             "Server event\ntype: " + send + "\n(time" + send.getDate() + ")");
+                }
+
+                if(send instanceof SuccessAnswerServerResp r){
+                    System.out.println("SEND "+ r.getUserSet());
                 }
 
                 out.writeObject(send);
