@@ -9,6 +9,7 @@ import server.reciever.ReceiverServer;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.net.SocketException;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 
@@ -21,18 +22,21 @@ public class ReceiverServerJava extends ReceiverServer {
     }
 
     @Override
-    public void run(){
-        while(!Thread.interrupted()){
+    public void run() {
+        while (!Thread.interrupted()) {
             try {
                 Request userReq = (Request) in.readObject();
 
                 logger.makeLog(Level.INFO,
-                        "Request from <"+context.getUserName()+">\ntype:"+
-                                userReq+"\n("+userReq.getId()+" id request)");
+                        "Request from <" + context.getUserName() + ">\ntype:" +
+                                userReq + "\n(" + userReq.getId() + " id request)");
 
                 userReq.accept(visitor);
             } catch (IOException | ClassNotFoundException e) {
-                System.out.println("Rcvr srv "+e.getMessage());
+                System.out.println("Rcvr srv " + e.getMessage());
+                if (e instanceof SocketException) {
+                    break;
+                }
             }
         }
     }
