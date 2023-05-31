@@ -16,7 +16,6 @@ import protocol.json.serializer.JsonSerializerObjUser;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.concurrent.BlockingQueue;
 
 public class SenderClientJson extends SenderClient {
