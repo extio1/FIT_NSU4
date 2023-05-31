@@ -4,29 +4,20 @@ import client.ClientSessionData;
 import protocol.ObjectUser;
 import protocol.Request;
 import protocol.Response;
-import protocol.serverObject.response.SuccessAnswerServerResp;
 import protocol.visitor.VisitorClient;
 
-import java.io.Serializable;
 
-public class RegisterUserReq extends ObjectUser implements Request {
+public class MessageUserReq extends ObjectUser implements Request {
     private final String data;
-    public RegisterUserReq(String name){
+    public MessageUserReq(String message){
         super();
-        data = name;
+        data = message;
     }
-    public String getName() {
+    public String getMessage() {
         return data;
     }
     public void accept(VisitorClient v) {
-        v.visitRegisterUserRequest(this);
+        v.visitMessageRequest(this);
     }
-    public void handleServerResponse(Response r, ClientSessionData data) {
-        if(r instanceof SuccessAnswerServerResp s){
-            if(s.getChatHistory() != null)
-                data.setChatHistory(s.getChatHistory());
-            if(s.getUserName() != null)
-                data.setClientName(s.getUserName());
-        }
-    }
+    public void handleServerResponse(Response r, ClientSessionData data) {}
 }
