@@ -1,84 +1,37 @@
-package server.ui;
+package server;
 
-import server.Server;
-import server.logger.LoggerServer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 
-import javax.swing.*;
-import java.awt.event.*;
+public class ChatContext {
+    private final Set<String> userList = new ConcurrentSkipListSet<>();
+    private final List<String[]> chatHistory = new ArrayList<>();
 
-public class ServerGUI extends JFrame{
-    private final Server server;
-    private JPanel mainFrame;
-    private JTextArea textArea;
-    private final LoggerServer logger;
-    private final Refresher refresher = new Refresher();
-
-    public ServerGUI(Server server){
-        setSize(500, 500);
-        setContentPane(mainFrame);
-        setName("Chat server");
-
-        refresher.setName("Server refresher thread");
-        this.logger = server.getLogger();
-        this.server = server;
-        refresher.start();
-        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
-        addWindowListener(new WindowListener() {
-            @Override
-            public void windowOpened(WindowEvent e) {
-            }
-
-            @Override
-            public void windowClosing(WindowEvent e) {
-                dispose();
-                refresher.interrupt();
-                server.shutdown();
-            }
-
-            @Override
-            public void windowClosed(WindowEvent e) {
-            }
-
-            @Override
-            public void windowIconified(WindowEvent e) {
-            }
-
-            @Override
-            public void windowDeiconified(WindowEvent e) {
-            }
-
-            @Override
-            public void windowActivated(WindowEvent e) {
-            }
-
-            @Override
-            public void windowDeactivated(WindowEvent e) {
-            }
-        });
-        setFocusable(true);
-        setVisible(true);
+    synchronized public void addUser(String name){
+        userList.add(name);
+    }
+    synchronized public void removeUser(String name){
+        userList.remove(name);
+    }
+    synchronized public void addMsg(String date, String name, String msg){
+        chatHistory.add(new String[]{date, name, msg});
+    }
+    synchronized public void addMsgServer(String date, String msg){
+        chatHistory.add(new String[]{date, "SERVER", msg});
+    }
+    synchronized public Set<String> getUserSet() {
+        return userList;
     }
 
-    private class Refresher extends Thread{
-        @Override
-        public void run(){
-            while(!Thread.interrupted()){
-                String st;
-                synchronized (logger) {
-                    while(!logger.isNewStringAvailable() && !Thread.interrupted()) {
-                        try {
-                                logger.wait();
-                        } catch (InterruptedException e) {
-                            this.interrupt();
-                            break;
-                        }
-                    }
-                st = logger.getLastEventLog();
-                }
-                textArea.append(st);
-                textArea.append("\n----------------------------------------------------\n");
-            }
+    synchronized public List<String[]> getChatHistory(int lastN) {
+        int idx = chatHistory.size()-1-lastN;
+
+        if(idx >= 0)
+            return new ArrayList<>(chatHistory.subList(idx, chatHistory.size()));
+        else {
+            return new ArrayList<>(chatHistory.subList(0, chatHistory.size()));
         }
     }
 }
-
