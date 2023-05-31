@@ -141,7 +141,7 @@ public class ChatClientGui extends JFrame{
                 chatField.append(message[0] + "<" + message[1] + " says>: " + message[2] + "\n");
             }
 
-            var userList = data.getUserList();
+            var userList = data.getUserSet();
             userListField.setText("");
             for (String user : userList) {
                 userListField.append(user + '\n');
