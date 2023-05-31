@@ -93,26 +93,30 @@ public class Client {
     }
 
     private void reconnect() throws IOException, UnknownImplementationException, InterruptedException {
-        sender.interrupt();
-        receiver.interrupt();
-        socket.close();
+        try {
+            //if wasn't IOException
+            sender.interrupt();
+            receiver.interrupt();
+            socket.close();
 
-        toSendQueue.clear();
+            toSendQueue.clear();
 
-        socket = new Socket(configuration.hostName, configuration.port);
+            socket = new Socket(configuration.hostName, configuration.port);
 
-        ping = new Ping();
-        sender = SenderClient.makeSender(toSendQueue, sessionData, socket, configuration.impl);
-        receiver = ReceiverClient.makeReceiver(visitorServerMessages, socket, configuration.impl);
+            ping = new Ping();
+            sender = SenderClient.makeSender(toSendQueue, sessionData, socket, configuration.impl);
+            receiver = ReceiverClient.makeReceiver(visitorServerMessages, socket, configuration.impl);
 
-        receiver.start();
-        sender.start();
-        ping.start();
+            receiver.start();
+            sender.start();
+            ping.start();
 
-        System.out.println(sessionData.getNickname()+"  "+sessionData.getClientName());
-        registerNewUser(sessionData.getNickname());
+            registerNewUser(sessionData.getNickname());
 
-        System.out.println("Client reconnected at "+ socket.getInetAddress()+" port "+ socket.getPort());
+            System.out.println("Client reconnected at " + socket.getInetAddress() + " port " + socket.getPort());
+        } catch (IOException e){
+            System.out.println("Server is unreachable");
+        }
     }
 
     private class Ping extends Thread{
@@ -128,16 +132,16 @@ public class Client {
             srv.connect(new InetSocketAddress("localhost", ECHO_PORT));
             srv.setSoTimeout(configuration.timeout);
         }
+        private InputStream in;
+        private OutputStream out;
         @Override
         public void run() {
             try {
-                InputStream in = srv.getInputStream();
-                OutputStream out = srv.getOutputStream();
-
+                in = srv.getInputStream();
+                out = srv.getOutputStream();
                 while (!Thread.interrupted()) {
                     try {
-                        out.write(1);
-                        int rd = in.read();
+                        doPing();
                         sleep(PERIOD);
                     } catch (SocketException e) {
                         boolean agree = sessionData.askYesNo("Server refused connection\nReconnect?");
@@ -148,14 +152,12 @@ public class Client {
                         }
                         break;
                     } catch (SocketTimeoutException e){
-                        boolean agree = sessionData.askYesNo("Server didn't response for " + configuration.timeout + "sec." +
-                                "\nReconnect?");
-                        if(agree){
-                            reconnect();
-                        } else {
+                        boolean agree = sessionData.askYesNo("Server didn't response for " + configuration.timeout/1000 + "sec." +
+                                "\nWait?");
+                        if(!agree){
                             terminateConnection();
+                            break;
                         }
-                        break;
                     } catch (InterruptedException e) {
                         break;
                     }
@@ -163,6 +165,11 @@ public class Client {
             } catch (IOException | UnknownImplementationException e) {
                 throw new RuntimeException(e);
             } catch (InterruptedException ignored) {}
+        }
+
+        public void doPing() throws IOException {
+            out.write(1);
+            int rd = in.read();
         }
     }
 }
