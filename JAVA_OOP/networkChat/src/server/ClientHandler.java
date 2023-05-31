@@ -79,36 +79,42 @@ public class ClientHandler {
 
         @Override
         public void run() {
+            InputStream in = null;
+            OutputStream out = null;
             try {
-                InputStream in = sock.getInputStream();
-                OutputStream out = sock.getOutputStream();
+                 in = sock.getInputStream();
+                 out = sock.getOutputStream();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
 
-                while (!Thread.interrupted()) {
-                    try {
-                        int obj = in.read();
-                        out.write(obj);
-                    } catch (SocketTimeoutException e) {
+            while (!Thread.interrupted()) {
+                try {
+                    int obj = in.read();
+                    out.write(obj);
+                } catch (IOException e) {
+                    if(e instanceof SocketTimeoutException) {
                         ServerObjFabric fabric = new ServerObjFabric();
 
                         server.getContext().removeUser(context.getUserName());
 
                         server.doBroadcast(fabric.makeDetachedUserEvent(context.getUserName()));
 
-                        MessageFromServerEv ev = fabric.makeMessageFromServer(context.getUserName()+" left(timeout)");
+                        MessageFromServerEv ev = fabric.makeMessageFromServer(context.getUserName() + " left(timeout)");
+                        server.getContext().addMsgServer(ev.getDate(), context.getUserName() + " left(timeout)");
                         server.doBroadcast(ev);
-
-                        server.getContext().addMsgServer(ev.getDate(), context.getUserName()+" left(timeout)");
 
                         sender.interrupt();
                         receiver.interrupt();
-                        socket.close();
-                        echoSocket.close();
+                        try {
+                            socket.close();
+                            echoSocket.close();
+                        } catch (IOException ex) {
+                            System.out.println(ex.getMessage());
+                        }
                         break;
                     }
                 }
-
-            } catch (IOException e) {
-                System.out.println(e.getMessage());
             }
         }
     }
