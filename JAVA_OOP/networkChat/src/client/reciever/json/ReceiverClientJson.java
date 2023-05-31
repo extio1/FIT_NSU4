@@ -23,6 +23,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
+import java.net.SocketException;
 
 
 public class ReceiverClientJson extends ReceiverClient {
@@ -53,6 +54,9 @@ public class ReceiverClientJson extends ReceiverClient {
                 }
             } catch (IOException e) {
                 System.out.println("Receiver clt "+e.getMessage());
+                if(e instanceof SocketException){
+                    break;
+                }
             }
         }
     }
