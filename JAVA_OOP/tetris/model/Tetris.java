@@ -1,6 +1,5 @@
 package model;
 
-import main.Main;
 import model.exception.*;
 import model.gamefield.GameField2D;
 
@@ -74,6 +73,7 @@ public class Tetris extends Thread implements Subject {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private void readGameStatFile(){
         try(ObjectInputStream bis = new ObjectInputStream(new FileInputStream(STAT_FILE_PATH))) {
             playersStat = (TreeMap<String, Integer>) bis.readObject();
@@ -135,7 +135,7 @@ public class Tetris extends Thread implements Subject {
         nextColor = currColor + COLOR_STEP;
 
         gameScore = 0;
-        nextFigureNum = 6;
+        nextFigureNum = randomGenerator.nextInt(0, 7);
         figureFallingPeriod = TIME_FALLING_PERIOD_START;
         generateNewFallingFigure();
     }
@@ -250,7 +250,7 @@ public class Tetris extends Thread implements Subject {
         fallingFigure = tetrisFigures[nextFigureNum];
         fallingFigure.refresh();
 
-        nextFigureNum = 6;
+        nextFigureNum = randomGenerator.nextInt(0, 7);
         tetrisFigures[nextFigureNum].refresh();
     }
 
